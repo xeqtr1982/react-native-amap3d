@@ -1,6 +1,7 @@
 package cn.qiuxiang.react.amap3d.maps
 
 import android.content.Context
+import android.util.Log
 import android.view.View
 import cn.qiuxiang.react.amap3d.toLatLng
 import cn.qiuxiang.react.amap3d.toLatLngBounds
@@ -56,9 +57,12 @@ class AMapView(context: Context) : TextureMapView(context) {
         }
 
         map.setOnMarkerClickListener { marker ->
+            Log.i("marker", marker.`object`.toString())
+            val data = (marker.`object` as ElementKeyData).toWritableMap()
+            Log.i("marker",data.toString())
             markers[marker.id]?.let {
                 it.active = true
-                emit(it.id, "onPress")
+                emit(it.id, "onPress", data)
             }
             true
         }

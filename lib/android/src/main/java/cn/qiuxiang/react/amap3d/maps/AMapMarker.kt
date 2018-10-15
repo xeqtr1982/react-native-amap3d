@@ -65,6 +65,22 @@ class AMapMarker(context: Context) : ReactViewGroup(context), AMapOverlay {
             marker?.isFlat = value
         }
 
+    /*
+    * lee
+    * */
+    var rotateAngle: Float = 0.0f
+        set(value) {
+            field = value
+            marker?.rotateAngle = value
+        }
+    //        var data: ReadableMap
+//        set(value) {
+//            field = value
+//            marker?.`object` = value
+//        }
+    var elementKey = ""
+    var elementType: Int = 0
+
     var opacity: Float = 1f
         set(value) {
             field = value
@@ -118,6 +134,9 @@ class AMapMarker(context: Context) : ReactViewGroup(context), AMapOverlay {
                 .snippet(snippet)
                 .zIndex(zIndex))
 
+        val data = ElementKeyData(elementKey, elementType)
+        marker?.`object` = data
+        marker?.setRotateAngle(rotateAngle)
         this.clickDisabled = clickDisabled
         this.active = active
     }
@@ -146,6 +165,7 @@ class AMapMarker(context: Context) : ReactViewGroup(context), AMapOverlay {
     }
 
     fun setImage(name: String) {
+        //Log.i("xxx",context.packageName+","+name)
         val drawable = context.resources.getIdentifier(name, "drawable", context.packageName)
         bitmapDescriptor = BitmapDescriptorFactory.fromResource(drawable)
         marker?.setIcon(bitmapDescriptor)
@@ -157,6 +177,11 @@ class AMapMarker(context: Context) : ReactViewGroup(context), AMapOverlay {
         marker?.setAnchor(anchorU, anchorV)
     }
 
+//    fun setRotateAngle(rotateAngle: Float) {
+//        //marker?.rotateAngle = rotateAngle
+//        marker?.setRotateAngle(rotateAngle)
+//    }
+
     fun lockToScreen(args: ReadableArray?) {
         if (args != null) {
             val x = args.getDouble(0).toFloat().toPx()
@@ -165,3 +190,5 @@ class AMapMarker(context: Context) : ReactViewGroup(context), AMapOverlay {
         }
     }
 }
+
+data class ElementKeyData(var elementKey: String, var elementType: Int)

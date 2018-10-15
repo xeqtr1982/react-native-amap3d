@@ -1,6 +1,7 @@
 package cn.qiuxiang.react.amap3d
 
 import android.content.res.Resources
+import cn.qiuxiang.react.amap3d.maps.ElementKeyData
 import com.amap.api.maps.model.LatLng
 import com.amap.api.maps.model.LatLngBounds
 import com.facebook.react.bridge.Arguments
@@ -24,6 +25,17 @@ fun LatLng.toWritableMap(): WritableMap {
     val map = Arguments.createMap()
     map.putDouble("latitude", this.latitude)
     map.putDouble("longitude", this.longitude)
+    return map
+}
+
+//fun ReadableMap.toElementKeyData(): ElementKeyData {
+//    return ElementKeyData(this.getString("key"), this.getInt("elementType"))
+//}
+
+fun ElementKeyData.toWritableMap(): WritableMap {
+    val map = Arguments.createMap()
+    map.putString("elementKey", this.elementKey)
+    map.putInt("elementType", this.elementType)
     return map
 }
 

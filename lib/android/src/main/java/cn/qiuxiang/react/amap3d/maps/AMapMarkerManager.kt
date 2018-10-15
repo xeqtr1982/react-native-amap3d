@@ -2,7 +2,6 @@ package cn.qiuxiang.react.amap3d.maps
 
 import android.view.View
 import cn.qiuxiang.react.amap3d.toLatLng
-import com.amap.api.maps.model.LatLng
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.MapBuilder
@@ -122,5 +121,21 @@ internal class AMapMarkerManager : ViewGroupManager<AMapMarker>() {
     @ReactProp(name = "anchor")
     fun setAnchor(view: AMapMarker, coordinate: ReadableMap) {
         view.setAnchor(coordinate.getDouble("x"), coordinate.getDouble("y"))
+    }
+
+    @ReactProp(name = "rotateAngle")
+    fun setRotateAngle(view: AMapMarker, rotateAngle: Float) {
+        view.rotateAngle = rotateAngle
+        //view.setRotateAngle(rotateAngle)
+    }
+
+    @ReactProp(name = "elementKey")
+    fun setKey(view: AMapMarker, elementKey: String) {
+        view.elementKey = elementKey
+    }
+
+    @ReactProp(name = "elementType")
+    fun setElementType(view: AMapMarker, elementType: Int) {
+        view.elementType = elementType
     }
 }
