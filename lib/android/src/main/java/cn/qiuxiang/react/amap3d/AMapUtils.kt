@@ -2,12 +2,14 @@ package cn.qiuxiang.react.amap3d
 
 import android.content.res.Resources
 import cn.qiuxiang.react.amap3d.maps.ElementKeyData
+import cn.qiuxiang.react.amap3d.maps.ExtraData
 import com.amap.api.maps.model.LatLng
 import com.amap.api.maps.model.LatLngBounds
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
+import com.google.gson.JsonObject
 
 fun Float.toPx(): Int {
     return (this * Resources.getSystem().displayMetrics.density).toInt()
@@ -36,6 +38,25 @@ fun ElementKeyData.toWritableMap(): WritableMap {
     val map = Arguments.createMap()
     map.putString("elementKey", this.elementKey)
     map.putInt("elementType", this.elementType)
+    return map
+}
+
+fun ExtraData.toWritableMap(): WritableMap {
+    val map = Arguments.createMap()
+    map.putString("elementKey", this.elementKey)
+    map.putInt("elementType", this.elementType)
+    map.putMap("elementValue",this.elementValue?.toWritableMap())
+    return map
+}
+
+//只针对简单对象，测试点
+fun JsonObject.toWritableMap(): WritableMap {
+    val map = Arguments.createMap()
+    for ((key, value) in this.entrySet())
+    //if (value is JsonObject)
+        map.putString(key, value.asString)
+//        else if (value is JsonArray)
+//            map.putArray(key, null)
     return map
 }
 

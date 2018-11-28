@@ -16,6 +16,7 @@ class AMap3DPackage : ReactPackage {
     override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
         return listOf(
                 AMapViewManager(),
+                AMapSimpleViewManager(),
                 AMapMarkerManager(),
                 AMapTextManager(),
                 AMapInfoWindowManager(),
