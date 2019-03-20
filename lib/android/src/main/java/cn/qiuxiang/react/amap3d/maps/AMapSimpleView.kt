@@ -2,9 +2,14 @@ package cn.qiuxiang.react.amap3d.maps
 
 //import com.amap.api.maps.model.BitmapDescriptor
 import android.content.Context
-import android.graphics.*
+import android.graphics.Color
 import android.view.MotionEvent
-import cn.qiuxiang.react.amap3d.dt.*
+import cn.qiuxiang.react.amap3d.dt.CellObj
+import cn.qiuxiang.react.amap3d.dt.MapElementType
+import cn.qiuxiang.react.amap3d.dt.ParamObj
+import cn.qiuxiang.react.amap3d.dt.ParamObj.createNewBitmapDescriptor
+import cn.qiuxiang.react.amap3d.dt.ParamObj.getTestPointColor
+import cn.qiuxiang.react.amap3d.dt.TestPoint
 import cn.qiuxiang.react.amap3d.toLatLng
 import cn.qiuxiang.react.amap3d.toLatLngBounds
 import cn.qiuxiang.react.amap3d.toWritableMap
@@ -18,9 +23,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
-import com.google.gson.Gson
 import com.google.gson.JsonArray
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 
 /**
@@ -33,22 +36,17 @@ class AMapSimpleView(context: Context) : MapView(context) {
         locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
         locationStyle
     }
-    private val markers = HashMap<String, Marker>()
-    //private val lines = HashMap<String, Polyline>()
-
-    private var _cellMarkers: MutableList<Marker> = mutableListOf()//长度可变List
-    private var _paramMarkers: MutableList<Marker> = mutableListOf()
-    private var _paramLines: MutableList<Polyline> = mutableListOf()
-    private var _connectionLines:MutableList<Polyline> = mutableListOf()
+    private var map_markers = HashMap<Int, MutableList<Marker>>()
+    private val map_lines = HashMap<Int, MutableList<Polyline>>()
+    private val map_polygons = HashMap<Int, MutableList<Polygon>>()
+    private var save_TestPoints: MutableList<TestPoint> = mutableListOf()
 
     private val maxTestPointCount = 100 //最多绘制测试点数
     private val maxTestLinesCount = 12 //最多绘制线段数
     private val maxlinePointsCount = 80 //每条线段的点数，必须小于maxTestPointCount
-    private val _gps_size: Int = 48
     private val renderFields = arrayOf("RSRP", "RxLev")//private var renderField="RSRP"
-    private val renderMaps = HashMap<Int, BitmapDescriptor>()
-
-    private val cellRenderMaps = HashMap<String, BitmapDescriptor>()
+    private val renderMaps = HashMap<String, BitmapDescriptor>()
+    //private val cellRenderMaps = HashMap<String, BitmapDescriptor>()
 
 
     private var _touchCount: Int = 0 //是否手动拖动地图的判断值
@@ -61,279 +59,46 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     //get() = field
 
-
-    fun addCells(args: ReadableArray?) {
-
-        //cellsDataStr: String
-        //val cells = Gson().fromJson<List<Cell>>(cellsDataStr, object : TypeToken<List<Cell>>() {}.type)
-
-        removeAllCells()
-
-        val targets = args?.getArray(0)!!
-        val size = args?.getInt(1)!!
-
-        for (i in 0 until targets.size()) {
-            val target = targets.getMap(i)
-            val cellObject = JsonObject()
-            for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
-                cellObject.addProperty(key, value?.toString())
-            }
-            val marker = getCellMarker(cellObject, size)
-            marker?.let {
-                _cellMarkers.add(marker)
-            }
-        }
-        //map.runOnDrawFrame()//refresh map
-
-    }
-
-    private fun getCellMarker2(cell: Cell, size: Int): Marker? {
-        if (cell == null)
-            return null
-        else {
-            val marker = map.addMarker(MarkerOptions()
-                    .setFlat(false)
-                    //.icon(bitmapDescriptor)
-                    .alpha(1f)
-                    .draggable(false)
-                    .position(LatLng(cell.Lat, cell.Lon))
-                    .anchor(0.5f, if (cell.SiteType == 0) 0.5f else 1.0f)
-                    //.infoWindowEnable(true)
-                    .title(cell.CellName)
-                    .rotateAngle(if (cell.SiteType == 0) 0f else 360 - cell.Azimuth)
-            )
-
-            //MapElementType.valueOf("mark_Cell")
-            //    MapElementType.mark_GPS.name
-            //    MapElementType.mark_Event.ordinal
-            val data = ExtraData(cell.CellID, MapElementType.mark_Cell.value, null)
-            marker?.`object` = data
-
-            return marker
+    fun addElements(args: ReadableArray?) {
+        val elementType = args?.getInt(0)!!
+        if (!map_markers.containsKey(elementType))
+            map_markers.put(elementType, mutableListOf())
+        when (elementType) {
+            MapElementType.mark_GPS.value -> addTestPoints(args) //addtestpoints
+            MapElementType.mark_Cell.value -> addCells(args) //addcells
+            MapElementType.mark_Order.value -> addOrders(args) //addorders
         }
     }
 
-    private fun getCellMarker(cellObject: JsonObject?, size: Int): Marker? {
-        if (cellObject == null)
-            return null
-        val siteType = cellObject["SITETYPE"].asString //2--inner,1--outer
-
-        if (siteType.isNullOrEmpty())
-            return null
-        val auchorY = when (siteType == "2") {
-            true -> 0.5f
-            false -> 1.0f
-        }
-        val azimuth = cellObject["AZIMUTH"].asFloat
-        val rotateAngle: Float = when (siteType == "2") {
-            true -> 0.0f
-            false -> 360 - azimuth
-        }
-        val wgslat = cellObject["LAT"].asDouble
-        val wgslon = cellObject["LON"].asDouble
-
-        val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
-
-        val bitmapDescriptor = getCellBitmapDescriptor(siteType, "LTE", size)
-        val marker = map.addMarker(MarkerOptions()
-                .setFlat(false)
-                .icon(bitmapDescriptor)
-                .alpha(1f)
-                .draggable(false)
-                .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
-                .anchor(0.5f, auchorY)
-                .infoWindowEnable(true)
-                .title(cellObject["CELLID"].asString)
-                .rotateAngle(rotateAngle)
-                .zIndex(0f)
-        )
-
-        val data = ExtraData(cellObject["CELLID"].asString, MapElementType.mark_Cell.value, cellObject)
-        marker?.`object` = data
-
-        return marker
-    }
-
-    private fun getCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
-        val key = netWork + "_" + siteType
-        if (!cellRenderMaps.containsKey(key)) {
-            val cellRender = CellRender()
-            val cellStyle = cellRender.CELL_STYLE_LTE
-            val cellPath = when (siteType == "2") {true -> cellRender.INNER_CELL_PATH_ADJUST
-                false -> cellRender.OUT_CELL_PATH_30
-            }
-
-            val scale = size * 1.0f / cellPath.height
-
-            val paint = Paint()
-            paint.color = cellStyle.color
-
-            val paintStroke = Paint()
-            paintStroke.style = Paint.Style.STROKE
-            paintStroke.color = cellStyle.strokeColor
-
-            val path1 = PathParser().createPathFromPathData(cellPath.pathData)
-            val path = Path()
-            val matrix = Matrix()
-            matrix.postScale(scale, scale)
-            path.addPath(path1, matrix)
-
-            val bitmap = Bitmap.createBitmap(
-                    size, size, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            canvas.drawPath(path, paint)//填充图形
-            canvas.drawPath(path, paintStroke)//外边框
-            val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-            if (bitmapDescriptor != null) cellRenderMaps.put(key, bitmapDescriptor)
-        }
-        return cellRenderMaps[key]
-    }
-
-    fun removeAllCells(): Unit {
-        if (_cellMarkers.any()) {
-            for (marker in _cellMarkers) {
-                marker?.remove()
-            }
-            _cellMarkers.clear()
+    fun addElement(args: ReadableArray?) {
+        val elementType = args?.getInt(0)!!
+        if (!map_markers.containsKey(elementType))
+            map_markers.put(elementType, mutableListOf())
+        when (elementType) {
+            MapElementType.mark_GPS.value -> addTestPoint(args) //addtestpoints
+            //MapElementType.mark_Cell.value -> addCells(args) //addcells
+            //MapElementType.mark_Order.value -> addOrders(args) //addorders
         }
     }
 
-    fun changeCellsVisible(args: ReadableArray?): Unit {
+    fun removeElements(args: ReadableArray?) {
+        val elementType = args?.getInt(0)!!
+        clearElementsByType(elementType)
+    }
 
-        val visible: Boolean = args?.getBoolean(0)!!
-        if (_cellMarkers.any()) {
-            for (marker in _cellMarkers) {
-                marker.isVisible = visible
+    fun clearElementsByType(elementType: Int) {
+        if (map_markers.containsKey(elementType)) {
+            var elements = map_markers[elementType]!!
+            elements?.let {
+                clearMarkerList(elements)
             }
         }
-    }
-
-    fun changeCellStyle(args: ReadableArray?): Unit {
-
-    }
-
-    fun getTestPointColor(testPoint: JsonObject): Int {
-
-        var color: Int = Color.GRAY
-        val colorstr = testPoint["KeyColor"].toString()
-
-        if (!colorstr.isNullOrEmpty())
-            color = Color.parseColor(colorstr.replace("\"", "", true))
-        return color
-
-    }
-
-    fun getBitmapDescriptorByValue(testPoint: JsonObject?): BitmapDescriptor? {
-        if (testPoint == null)
-            return null
-        var color: Int = getTestPointColor(testPoint)
-        //Log.i("color", color.toString())
-        if (!renderMaps.containsKey(color)) {
-            val bitmapDescriptor: BitmapDescriptor? = createNewBitmapDescriptor(_gps_size, color)// BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN) //
-            if (bitmapDescriptor != null) renderMaps.put(color, bitmapDescriptor)
-
-        }
-
-        return renderMaps[color]
-    }
-
-    fun createNewBitmapDescriptor(width: Int, color: Int): BitmapDescriptor? {
-        val paint = Paint()
-        paint.color = color
-
-        val bitmap = Bitmap.createBitmap(
-                width, width, Bitmap.Config.ARGB_8888)
-        var canvas = Canvas(bitmap)
-        //canvas.drawColor(Color.BLUE)
-        val radius: Float = (width / 2).toFloat()
-        canvas.drawCircle(radius, radius, radius, paint)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
-
-    }
-
-    /*
-    * 判断当前点和上一个点主要参数是否相同，目前之比较纬度、经度、渲染参数
-    * */
-    private fun isSameAsLast(lat: Double, lon: Double, value: JsonElement): Boolean {
-        if (_paramMarkers.count() == 0)
-            return false
-        else {
-            val last = _paramMarkers.last()
-            val lastTestPoint = (last.`object` as ExtraData).elementValue!!
-            val last_value = lastTestPoint[lastTestPoint["KeyField"].asString]
-            if (lat == last.position.latitude && lon == last.position.longitude && value.equals(last_value))
-                return true
-        }
-        return false
-    }
-
-    private fun getParamMarker(testPoint: JsonObject?): Marker? {
-        if (testPoint != null) {
-            val lat = testPoint["GCJ_LAT"].asDouble
-            val lon = testPoint["GCJ_LON"].asDouble
-            val value = testPoint[testPoint["KeyField"].asString]
-            if (isSameAsLast(lat, lon, value)) return null
-            val bitmapDescriptor = getBitmapDescriptorByValue(testPoint)
-            val title = testPoint["KeyField"].asString + "：" + when (value.isJsonNull) {
-                true -> ""
-                false -> value.toString()
+        if (elementType == MapElementType.mark_GPS.value) {
+            var lines = map_lines[MapElementType.line_TestPoint.value]
+            lines?.let {
+                clearLineList(lines)
             }
-
-            val marker = map.addMarker(MarkerOptions()
-                    .setFlat(false)
-                    .icon(bitmapDescriptor)
-                    .alpha(1f)
-                    .draggable(false)
-                    .position(LatLng(lat, lon))
-                    .anchor(0.5f, 0.5f)
-                    //.infoWindowEnable(true)
-                    .title(title)
-                    //.snippet("")
-                    .zIndex(0.0f)
-            )
-
-            //MapElementType.valueOf("mark_Cell")
-            //    MapElementType.mark_GPS.name
-            //    MapElementType.mark_Event.ordinal
-            val key = testPoint["frameNum"].asString
-            val data = ExtraData(key, MapElementType.mark_GPS.value, testPoint)
-            marker?.`object` = data
-            marker.isClickable = true
-
-            return marker
-        } else
-            return null
-    }
-
-    fun moveTo(position: LatLng): Unit {
-        if (following) {
-            val currentCameraPosition = map.cameraPosition
-            var zoomLevel = currentCameraPosition.zoom
-            var tilt = currentCameraPosition.tilt
-            var rotation = currentCameraPosition.bearing
-            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
-                    CameraPosition(position, zoomLevel, tilt, rotation))
-            map.animateCamera(cameraUpdate, null)//animateCallback)
-        }
-    }
-
-    /**
-     * 清除全部测试相关内容，包括测试点和测试线
-     */
-    fun clearTestPoints() {
-        //Log.i("AmapSimpleView", "clearTestPoints")
-
-        if (_paramMarkers.any()) {
-            for (marker in _paramMarkers) {//List内remove是否会索引报错？？？？
-                marker?.remove()
-            }
-            _paramMarkers.clear()
-        }
-        if (_paramLines.any()) {
-            for (line in _paramLines) {//List内remove是否会索引报错？？？？
-                line?.remove()
-            }
-            _paramLines.clear()
+            save_TestPoints.clear()
         }
     }
 
@@ -349,72 +114,162 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     }
 
-    fun addTestPoints(args: ReadableArray?) {
-        //Log.i("android addTestPoints", args.toString())
-        //Log.i("AmapSimpleView", "addTestPoints")
-        val targets = args?.getArray(0)!!
-        val testStatus = args?.getString(1)
+    /**
+     * 清除指定线列表
+     * */
+    private fun clearLineList(c_lines: MutableList<Polyline>) {
+        if (c_lines.any()) {
+            for (line in c_lines) {
+                line?.remove()
+            }
+            c_lines.clear()
+        }
+    }
+
+    fun changeElementsVisible(args: ReadableArray?) {
+        val elementType: Int = args?.getInt(0)!!
+        val visible: Boolean = args?.getBoolean(1)!!
+        if (map_markers.containsKey(elementType)) {
+            var elements = map_markers[elementType]!!
+            elements?.let {
+                if (elements.any()) {
+                    for (marker in elements) {
+                        marker.isVisible = visible
+                    }
+                }
+            }
+
+        }
+        if (elementType == MapElementType.mark_GPS.value) {
+            var lines = map_lines[MapElementType.line_TestPoint.value]
+            lines?.let {
+                if (lines.any()) {
+                    for (line in lines) {//List内remove是否会索引报错？？？？
+                        line?.isVisible = visible
+                    }
+                }
+            }
+        }
+    }
+
+    fun changeElementsStyle(args: ReadableArray?) {}
+
+    //region getMarker
+
+//    private fun getMarker(elementType: Int, element: JsonObject?, size: Int): Marker? {
+//        var marker: Marker? = null
+//        when (elementType) {
+//            MapElementType.mark_GPS.value -> marker = getParamMarker(element, size) //addtestpoints
+//            MapElementType.mark_Cell.value -> marker = CellObj.getMarker(map,element, size) //addcells
+//            MapElementType.mark_Order.value -> marker = getOrderMarker(element, size) //addorders
+//        }
+//        return marker
+//    }
+
+    //endregion
+
+
+    private fun addOrders(args: ReadableArray?) {
+
+    }
+
+    private fun addCells(args: ReadableArray?) {
+
+        val elementType = args?.getInt(0)!!
+        val targets = args?.getArray(1)!!
+        val size = args?.getInt(2)!!
+        clearElementsByType(elementType)
+        val markers = map_markers[elementType]
+        for (i in 0 until targets.size()) {
+            val target = targets.getMap(i)
+            val cellObject = JsonObject()
+            for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
+                cellObject.addProperty(key, value?.toString())
+            }
+            val marker = CellObj.getMarker(map, cellObject, size) //getCellMarker(cellObject, size)
+            marker?.let {
+                markers?.add(marker)
+            }
+        }
+        //map.runOnDrawFrame()//refresh map
+
+    }
+
+    private fun addTestPoints(args: ReadableArray?) {
+        val elementType = args?.getInt(0)!!
+        val targets = args?.getArray(1)!!
+        val size = args?.getInt(2)!!
+        val testStatus = args?.getString(3)
+        var markers = map_markers[elementType]!!
         for (target in targets.toArrayList()) {
             val testPoint = JsonObject()
             for ((key, value) in (target as HashMap<String, Any>)) {
                 testPoint.addProperty(key, value?.toString())
             }
-            _addTestPoint(testPoint, testStatus)
+            _addTestPoint(markers, testPoint,size, testStatus)
         }
-
     }
 
-    fun addTestPoint(args: ReadableArray?) {
+    private fun addTestPoint(args: ReadableArray?) {
         //Log.i("android addTestPoint", args.toString())
         //Log.i("AmapSimpleView", "addTestPoint")
-        val testPoint = JsonObject()
-        val target = args?.getMap(0)!!
-        val testStatus = args?.getString(1)
 
+        val elementType = args?.getInt(0)!!
+        val target = args?.getMap(1)!!
+        val size = args?.getInt(2)!!
+        val testStatus = args?.getString(3)
+
+        val testPoint = JsonObject()
         for ((key, value) in target.toHashMap())
             testPoint.addProperty(key, value?.toString())
-        _addTestPoint(testPoint, testStatus)
+        _addTestPoint(map_markers[elementType]!!, testPoint, size,testStatus)
     }
 
-    fun addTestPoint(testPointStr: String, testStatus: String) {
-        val testPoint: JsonObject? = Gson().fromJson(testPointStr, JsonObject::class.java)
-        _addTestPoint(testPoint, testStatus)
-    }
 
-    fun _addTestPoint(testPoint: JsonObject?, testStatus: String) {
+    private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
         when (testStatus) {
-            "START" -> clearTestPoints()
+            "START" -> clearMarkerList(markers) //clearTestPoints()
             "RUNNING" -> {
-                val marker = getParamMarker(testPoint)
-                _addMultiTestPoint(marker)
+                val marker = ParamObj.getMarker(map, testPoint, size,
+                        when (markers.any()) {
+                            true -> markers.last()
+                            false -> null
+                        })
+                _addMultiTestPoint(markers, marker)
             }
             "STOPPED" -> {
-                val marker = getParamMarker(testPoint)
-                _addSingleTestPoint(marker)
+                val marker = ParamObj.getMarker(map, testPoint, size,
+                        when (markers.any()) {
+                            true -> markers.last()
+                            false -> null
+                        })
+                _addSingleTestPoint(markers, marker)
             }
-            "STOPPING", "ERROR" -> _addTestLine(_paramMarkers)
+            "STOPPING", "ERROR" -> _addTestLine(markers)
         }
     }
 
-    fun _addSingleTestPoint(marker: Marker?) {
+    private fun _addSingleTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         marker?.let {
-            if (_paramMarkers.count() > 1)
-                _addTestLine(_paramMarkers)
+            if (markers.count() > 1)
+                _addTestLine(markers)
             else
-                clearMarkerList(_paramMarkers)
-            _paramMarkers.add(it)
+                clearMarkerList(markers)
+            markers.add(it)
             moveTo(it.position)
         }
     }
 
-    fun _addMultiTestPoint(marker: Marker?) {
+    private fun _addMultiTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         if (marker != null) {
-            _paramMarkers.add(marker)
-            if (_paramMarkers.count() > maxTestPointCount) {
-                val testPoints = _paramMarkers.subList(0, maxlinePointsCount)
+            markers.add(marker)
+            if (markers.count() > maxTestPointCount) {
+                val testPoints = markers.subList(0, maxlinePointsCount)
                 _addTestLine(testPoints)
                 //val mk=_paramMarkers[maxTestPointCount];
-                _paramMarkers = _paramMarkers.drop(maxlinePointsCount).toMutableList()
+                val temp = markers.drop(maxlinePointsCount).toMutableList()
+                markers.clear()
+                markers.addAll(temp)
                 //_paramMarkers.removeAll({m->m   })
             }
             moveTo(marker.position)
@@ -422,7 +277,11 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
     }
 
-    fun _addTestLine(testPoints: MutableList<Marker>?) {
+    private fun _addTestLine(testPoints: MutableList<Marker>?) {
+        val linetype = MapElementType.line_TestPoint.value
+        if (!map_lines.containsKey(linetype))
+            map_lines.put(linetype, mutableListOf())
+        val lines = map_lines[linetype]!!
         testPoints?.let {
             if (testPoints.count() > 1) {
                 var coordinates: MutableList<LatLng> = mutableListOf()
@@ -435,8 +294,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
                     //移除了选中测试点，清除相关内容
                 }
 
-                if (_paramLines.count() >= maxTestLinesCount)
-                    _paramLines.removeAt(0)
+                if (lines.count() >= maxTestLinesCount)
+                    lines.removeAt(0)
                 //_paramLines=_paramLines.drop(1).toMutableList()
 
                 val polyline = map.addPolyline(PolylineOptions()
@@ -448,7 +307,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
                         .setDottedLine(false)
                         .zIndex(0f))
                 //key={new Date().getTime()}
-                _paramLines.add(polyline)
+                lines.add(polyline)
             }
             //删除对应测试点
             clearMarkerList(testPoints)
@@ -457,12 +316,14 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
     }
 
-    fun changeRenderField(args: ReadableArray?): Unit {
-        renderMaps.clear()
+    fun changeRenderField(args: ReadableArray?) {
+        ParamObj.clearRenderMaps()
         val field: String = args?.getString(0)!!
-        val ranges: JsonArray = args?.getArray(1)!! as JsonArray
-        if (_paramMarkers.any()) {
-            for (marker in _paramMarkers) {
+        val size:Int=args?.getInt(1)!!
+        val ranges: JsonArray = args?.getArray(2)!! as JsonArray
+        val markers = map_markers[MapElementType.mark_GPS.value]!!
+        if (markers.any()) {
+            for (marker in markers) {
                 val extData = (marker.`object` as ExtraData)?.elementValue
                 extData?.let {
                     val testPoint = it as JsonObject
@@ -480,41 +341,28 @@ class AMapSimpleView(context: Context) : MapView(context) {
                             break
                         }
                     }
-                    if (!renderMaps.containsKey(color)) {
-                        val bitmapDescriptor: BitmapDescriptor? = createNewBitmapDescriptor(_gps_size, color)
-                        if (bitmapDescriptor != null) renderMaps.put(color, bitmapDescriptor)
+                    val key = color.toString()
+                    if (!renderMaps.containsKey(key)) {
+                        val bitmapDescriptor: BitmapDescriptor? = createNewBitmapDescriptor(size, color)
+                        if (bitmapDescriptor != null) renderMaps.put(key, bitmapDescriptor)
 
                     }
-                    marker.setIcon(renderMaps[color])
+                    marker.setIcon(renderMaps[key])
                 }
             }
         }
     }
 
-    fun changeTestPointVisible(args: ReadableArray?): Unit {
-        val visible: Boolean = args?.getBoolean(0)!!
-        if (_paramMarkers.any()) {
-            for (marker in _paramMarkers) {
-                marker.isVisible = visible
-            }
-        }
-        if (_paramLines.any()) {
-            for (polylin in _paramLines) {
-                polylin.isVisible = visible
-            }
-        }
-    }
 
     init {
         super.onCreate(null)
-        renderMaps.clear()
-        map.moveCamera(CameraUpdateFactory.zoomTo(17f))
+
         map.setOnMapClickListener { latLng ->
-            for (marker in _cellMarkers) {
-                marker.hideInfoWindow()
-            }
-            for (marker in _paramMarkers) {
-                marker.hideInfoWindow()
+
+            for (markers in map_markers.values) {
+                for (marker in markers) {
+                    marker.hideInfoWindow()
+                }
             }
 
             emit(id, "onPress", latLng.toWritableMap())
@@ -569,6 +417,14 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 emitCameraChangeEvent("onStatusChange", position)
             }
         })
+
+        map.setOnMapLoadedListener {
+            val location = map.myLocation
+            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                    CameraPosition(LatLng(location.latitude, location.longitude), 17f, 0f, 0f))
+            map.animateCamera(cameraUpdate, 500, null)//animateCallback)
+            //map.moveCamera(CameraUpdateFactory.zoomTo(17f))
+        }
 
 //        map.setOnInfoWindowClickListener { marker ->
 //            emit(markers[marker.id]?.id, "onInfoWindowPress")
@@ -640,6 +496,18 @@ class AMapSimpleView(context: Context) : MapView(context) {
         map.animateCamera(cameraUpdate, duration.toLong(), null)//animateCallback)
     }
 
+    fun moveTo(position: LatLng): Unit {
+        if (following) {
+            val currentCameraPosition = map.cameraPosition
+            var zoomLevel = currentCameraPosition.zoom
+            var tilt = currentCameraPosition.tilt
+            var rotation = currentCameraPosition.bearing
+            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                    CameraPosition(position, zoomLevel, tilt, rotation))
+            map.animateCamera(cameraUpdate, null)//animateCallback)
+        }
+    }
+
     fun maptypeTo(args: ReadableArray?) {
         val target = args?.getMap(0)!!
 
@@ -669,6 +537,16 @@ class AMapSimpleView(context: Context) : MapView(context) {
         map.isMyLocationEnabled = enabled
         map.myLocationStyle = locationStyle
     }
+
+    //region Description
+
+    //    fun addTestPoint(testPointStr: String, testStatus: String) {
+//        val testPoint: JsonObject? = Gson().fromJson(testPointStr, JsonObject::class.java)
+//        _addTestPoint(testPoint, testStatus)
+//    }
+
+
+    //endregion
 
 }
 

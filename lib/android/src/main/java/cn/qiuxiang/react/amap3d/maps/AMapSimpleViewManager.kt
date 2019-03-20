@@ -21,13 +21,13 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         val MAPTYPE_TO = 2
         val CHANGEUI_TO = 3
         val CHANGE_FOLLOW = 4//改变地图跟随状态
-        val ADD_CELLS = 10//未使用，不通过js调用
-        val CHANGE_CELLS_VISIBLE = 11
-        val REMOVE_CELLS = 12
-        val ADD_TESTPOINT = 16
-        val ADD_TESTPOINTS = 17
-        val CHANGE_TESTPOINT_VISIBLE = 18
         val CHANGE_RENDER_FIELD = 19
+
+        val ADD_ELEMENTS=21
+        val ADD_ELEMENT=22
+        val REMOVE_ELEMENTS=23
+        val CHANGE_ELEMENTS_VISIBLE=24
+        val CHANGE_ELEMENTS_STYLE=25
     }
 
     override fun createViewInstance(reactContext: ThemedReactContext): AMapSimpleView {
@@ -40,10 +40,9 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
 
     override fun getCommandsMap(): Map<String, Int> {
         return mapOf("animateTo" to ANIMATE_TO, "maptypeTo" to MAPTYPE_TO, "changeUI" to CHANGEUI_TO,
-                "changeFollow" to CHANGE_FOLLOW,
-                "addCells" to ADD_CELLS, "changeCellsVisible" to CHANGE_CELLS_VISIBLE, "removeCells" to REMOVE_CELLS,
-                "addTestPoint" to ADD_TESTPOINT, "addTestPoints" to ADD_TESTPOINTS,
-                "changeTestPointVisible" to CHANGE_TESTPOINT_VISIBLE, "changeRenderField" to CHANGE_RENDER_FIELD)
+                "changeFollow" to CHANGE_FOLLOW,"changeRenderField" to CHANGE_RENDER_FIELD,
+                "addElements" to ADD_ELEMENTS,"addElement" to ADD_ELEMENT,"removeElements" to REMOVE_ELEMENTS,
+                "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE,"changeElementsStyle" to CHANGE_ELEMENTS_STYLE)
     }
 
     override fun receiveCommand(root: AMapSimpleView?, commandId: Int, args: ReadableArray?) {
@@ -51,13 +50,13 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
             ANIMATE_TO -> root?.animateTo(args)
             MAPTYPE_TO -> root?.maptypeTo(args)
             CHANGE_FOLLOW -> root?.following = true
-            ADD_TESTPOINT -> root?.addTestPoint(args)
-            ADD_TESTPOINTS -> root?.addTestPoints(args)
-            CHANGE_TESTPOINT_VISIBLE -> root?.changeTestPointVisible(args)
             CHANGE_RENDER_FIELD -> root?.changeRenderField(args)
-            ADD_CELLS -> root?.addCells(args)
-            CHANGE_CELLS_VISIBLE -> root?.changeCellsVisible(args)
-            REMOVE_CELLS -> root?.removeAllCells()
+            ADD_ELEMENTS->root?.addElements(args)
+            ADD_ELEMENT->root?.addElement(args)
+            REMOVE_ELEMENTS->root?.removeElements(args)
+            CHANGE_ELEMENTS_VISIBLE->root?.changeElementsVisible(args)
+            CHANGE_ELEMENTS_STYLE->root?.changeElementsStyle(args)
+
         }
     }
 

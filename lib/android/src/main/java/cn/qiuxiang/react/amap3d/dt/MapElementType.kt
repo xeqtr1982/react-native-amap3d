@@ -7,15 +7,17 @@ enum class MapElementType(val value:Int) {
     mark_GPS(1),
     mark_Event (2),
     mark_Cell(3),
-    mark_Selection(4),
-    mark_NaviOrignal(5), //导航起点
-    mark_NaviDest(6) , //导航终点
-    mark_Location (7), //定位点
-    line_Connection(11),
-    line_CellSelection(12),
-    line_GPSSelection(13),
-    line_Navigation(14), //导航线路
-    region_Grid(21)
+    mark_Order(4),
+    mark_Selection(11),
+    mark_NaviOrignal(12), //导航起点
+    mark_NaviDest(13) , //导航终点
+    mark_Location (14), //定位点
+    line_TestPoint(101),
+    line_Connection(111),
+    line_CellSelection(112),
+    line_GPSSelection(113),
+    line_Navigation(114), //导航线路
+    region_Grid(201)
 }
 
 enum class NetWork(val value:Int){
