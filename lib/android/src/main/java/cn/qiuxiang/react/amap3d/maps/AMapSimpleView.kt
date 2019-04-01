@@ -76,8 +76,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
             map_markers.put(elementType, mutableListOf())
         when (elementType) {
             MapElementType.mark_GPS.value -> addTestPoint(args) //addtestpoints
-            //MapElementType.mark_Cell.value -> addCells(args) //addcells
-            //MapElementType.mark_Order.value -> addOrders(args) //addorders
+        //MapElementType.mark_Cell.value -> addCells(args) //addcells
+        //MapElementType.mark_Order.value -> addOrders(args) //addorders
         }
     }
 
@@ -206,7 +206,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
             for ((key, value) in (target as HashMap<String, Any>)) {
                 testPoint.addProperty(key, value?.toString())
             }
-            _addTestPoint(markers, testPoint,size, testStatus)
+            _addTestPoint(markers, testPoint, size, testStatus)
         }
     }
 
@@ -222,7 +222,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         val testPoint = JsonObject()
         for ((key, value) in target.toHashMap())
             testPoint.addProperty(key, value?.toString())
-        _addTestPoint(map_markers[elementType]!!, testPoint, size,testStatus)
+        _addTestPoint(map_markers[elementType]!!, testPoint, size, testStatus)
     }
 
 
@@ -319,7 +319,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
     fun changeRenderField(args: ReadableArray?) {
         ParamObj.clearRenderMaps()
         val field: String = args?.getString(0)!!
-        val size:Int=args?.getInt(1)!!
+        val size: Int = args?.getInt(1)!!
         val ranges: JsonArray = args?.getArray(2)!! as JsonArray
         val markers = map_markers[MapElementType.mark_GPS.value]!!
         if (markers.any()) {
@@ -509,20 +509,14 @@ class AMapSimpleView(context: Context) : MapView(context) {
     }
 
     fun maptypeTo(args: ReadableArray?) {
-        val target = args?.getMap(0)!!
-
-        if (target.hasKey("maptype")) {
-            val mapType = target.getString("maptype")
-            when (mapType) {
-                "standard" -> map.mapType = AMap.MAP_TYPE_NORMAL
-                "satellite" -> map.mapType = AMap.MAP_TYPE_SATELLITE
-                "navigation" -> map.mapType = AMap.MAP_TYPE_NAVI
-                "night" -> map.mapType = AMap.MAP_TYPE_NIGHT
-                "bus" -> map.mapType = AMap.MAP_TYPE_BUS
-            }
+        val target = args?.getString(0)!! //.getMap(0)!!
+        when (target) {
+            "standard" -> map.mapType = AMap.MAP_TYPE_NORMAL
+            "satellite" -> map.mapType = AMap.MAP_TYPE_SATELLITE
+            "navigation" -> map.mapType = AMap.MAP_TYPE_NAVI
+            "night" -> map.mapType = AMap.MAP_TYPE_NIGHT
+            "bus" -> map.mapType = AMap.MAP_TYPE_BUS
         }
-
-
     }
 
     fun setRegion(region: ReadableMap) {
