@@ -23,11 +23,14 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         val CHANGE_FOLLOW = 4//改变地图跟随状态
         val CHANGE_RENDER_FIELD = 19
 
-        val ADD_ELEMENTS=21
-        val ADD_ELEMENT=22
-        val REMOVE_ELEMENTS=23
-        val CHANGE_ELEMENTS_VISIBLE=24
-        val CHANGE_ELEMENTS_STYLE=25
+        val ADD_ELEMENTS = 21
+        val ADD_ELEMENT = 22
+        val REMOVE_ELEMENTS = 23
+        val CHANGE_ELEMENTS_VISIBLE = 24
+        val CHANGE_ELEMENTS_STYLE = 25
+
+        val FROM_SCREEN_XY = 51
+        val FROM_SCREEN_RECT = 52
     }
 
     override fun createViewInstance(reactContext: ThemedReactContext): AMapSimpleView {
@@ -40,9 +43,11 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
 
     override fun getCommandsMap(): Map<String, Int> {
         return mapOf("animateTo" to ANIMATE_TO, "maptypeTo" to MAPTYPE_TO, "changeUI" to CHANGEUI_TO,
-                "changeFollow" to CHANGE_FOLLOW,"changeRenderField" to CHANGE_RENDER_FIELD,
-                "addElements" to ADD_ELEMENTS,"addElement" to ADD_ELEMENT,"removeElements" to REMOVE_ELEMENTS,
-                "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE,"changeElementsStyle" to CHANGE_ELEMENTS_STYLE)
+                "changeFollow" to CHANGE_FOLLOW, "changeRenderField" to CHANGE_RENDER_FIELD,
+                "addElements" to ADD_ELEMENTS, "addElement" to ADD_ELEMENT, "removeElements" to REMOVE_ELEMENTS,
+                "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE, "changeElementsStyle" to CHANGE_ELEMENTS_STYLE,
+                "fromScreenXY" to FROM_SCREEN_XY,"fromScreenRect" to FROM_SCREEN_RECT
+        )
     }
 
     override fun receiveCommand(root: AMapSimpleView?, commandId: Int, args: ReadableArray?) {
@@ -51,28 +56,28 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
             MAPTYPE_TO -> root?.maptypeTo(args)
             CHANGE_FOLLOW -> root?.following = true
             CHANGE_RENDER_FIELD -> root?.changeRenderField(args)
-            ADD_ELEMENTS->root?.addElements(args)
-            ADD_ELEMENT->root?.addElement(args)
-            REMOVE_ELEMENTS->root?.removeElements(args)
-            CHANGE_ELEMENTS_VISIBLE->root?.changeElementsVisible(args)
-            CHANGE_ELEMENTS_STYLE->root?.changeElementsStyle(args)
-
+            ADD_ELEMENTS -> root?.addElements(args)
+            ADD_ELEMENT -> root?.addElement(args)
+            REMOVE_ELEMENTS -> root?.removeElements(args)
+            CHANGE_ELEMENTS_VISIBLE -> root?.changeElementsVisible(args)
+            CHANGE_ELEMENTS_STYLE -> root?.changeElementsStyle(args)
+            FROM_SCREEN_XY -> root?.fromScreenXY(args)
+            FROM_SCREEN_RECT->root?.fromScreenRect(args)
         }
     }
 
     override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-        return MapBuilder.of(
+        val eventMap=MapBuilder.of(
                 "onPress", MapBuilder.of("registrationName", "onPress"),
                 "onLongPress", MapBuilder.of("registrationName", "onLongPress"),
                 "onMarkerPress", MapBuilder.of("registrationName", "onMarkerPress"),
-//                "onAnimateCancel", MapBuilder.of("registrationName", "onAnimateCancel"),
-//                "onAnimateFinish", MapBuilder.of("registrationName", "onAnimateFinish"),
                 "onStatusChange", MapBuilder.of("registrationName", "onStatusChange"),
                 "onStatusChangeComplete", MapBuilder.of("registrationName", "onStatusChangeComplete"),
-                "onLocation", MapBuilder.of("registrationName", "onLocation"),
-                "onFollowStateChanged", MapBuilder.of("registrationName", "onFollowStateChanged")//跟随状态发生改变
-
+                "onLocation", MapBuilder.of("registrationName", "onLocation")
         )
+        eventMap.put("onMapRectSelected", MapBuilder.of("registrationName", "onMapRectSelected"))//返回框选范围
+        eventMap.put("onFollowStateChanged", MapBuilder.of("registrationName", "onFollowStateChanged"))//跟随状态发生改变
+        return eventMap
     }
 
     @ReactProp(name = "locationEnabled")
@@ -83,6 +88,16 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
     @ReactProp(name = "showsCompass")
     fun setCompassEnabled(view: AMapSimpleView, show: Boolean) {
         view.map.uiSettings.isCompassEnabled = show
+    }
+
+    @ReactProp(name = "showsZoomControls")
+    fun setZoomControlsEnabled(view: AMapSimpleView, enabled: Boolean) {
+        view.map.uiSettings.isZoomControlsEnabled = enabled
+    }
+
+    @ReactProp(name = "showsScale")
+    fun setScaleControlsEnabled(view: AMapSimpleView, enabled: Boolean) {
+        view.map.uiSettings.isScaleControlsEnabled = enabled
     }
 
     @ReactProp(name = "showsLocationButton")
@@ -172,15 +187,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
 //        view.map.showBuildings(show)
 //    }
 
-//    @ReactProp(name = "showsZoomControls")
-//    fun setZoomControlsEnabled(view: AMapSimpleView, enabled: Boolean) {
-//        view.map.uiSettings.isZoomControlsEnabled = enabled
-//    }
-//
-//    @ReactProp(name = "showsScale")
-//    fun setScaleControlsEnabled(view: AMapSimpleView, enabled: Boolean) {
-//        view.map.uiSettings.isScaleControlsEnabled = enabled
-//    }
+
 //    @ReactProp(name = "scrollEnabled")
 //    fun setScrollGesturesEnabled(view: AMapSimpleView, enabled: Boolean) {
 //        view.map.uiSettings.isScrollGesturesEnabled = enabled

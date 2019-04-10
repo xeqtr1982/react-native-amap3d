@@ -16,6 +16,7 @@ import cn.qiuxiang.react.amap3d.toWritableMap
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapView
+import com.amap.api.maps.Projection
 import com.amap.api.maps.model.*
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
@@ -58,6 +59,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
             emit(id, "onFollowStateChanged", event)
         }
     //get() = field
+    private var project: Projection? = null
 
     fun addElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
@@ -353,9 +355,36 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     }
 
+    fun fromScreenXY(args: ReadableArray?) {
+//        val latLng = project?.fromScreenLocation(android.graphics.Point(args?.getInt(0)!!, args?.getInt(1)!!))!!
+//        val lat = latLng.latitude
+//        val lng = latLng.longitude
+//        emit(id, "onMapRectSelected", latLng.toWritableMap())
+    }
+
+    fun fromScreenRect(args: ReadableArray?) {
+        val elementType: Int = args?.getInt(0)!!
+        val rect = args?.getMap(1)!!
+        val minx: Int = rect.getInt("minx")
+        val maxx: Int = rect.getInt("maxx")
+        val miny: Int = rect.getInt("miny")
+        val maxy: Int = rect.getInt("maxy")
+
+        val leftbottom = project?.fromScreenLocation(android.graphics.Point(minx, maxy))!!
+        val righttop = project?.fromScreenLocation(android.graphics.Point(maxx, miny))!!
+
+        val data: WritableMap = Arguments.createMap()
+        data.putInt("elementType", elementType)
+        data.putDouble("min_lon", leftbottom.longitude)
+        data.putDouble("min_lat", leftbottom.latitude)
+        data.putDouble("max_lon", righttop.longitude)
+        data.putDouble("max_lat", righttop.latitude)
+        emit(id, "onMapRectSelected", data)
+    }
 
     init {
         super.onCreate(null)
+        project = map.projection
 
         map.setOnMapClickListener { latLng ->
 

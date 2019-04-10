@@ -40,7 +40,7 @@ object CellObj {
 
         val bitmapDescriptor = getCellBitmapDescriptor(siteType, "LTE", size)
         val marker = map.addMarker(MarkerOptions()
-                .setFlat(false)
+                .setFlat(true)
                 .icon(bitmapDescriptor)
                 .alpha(1f)
                 .draggable(false)
