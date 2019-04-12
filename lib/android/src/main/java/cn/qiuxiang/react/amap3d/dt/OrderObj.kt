@@ -1,8 +1,9 @@
 package cn.qiuxiang.react.amap3d.dt
 
+import android.graphics.*
+import cn.qiuxiang.react.amap3d.maps.ExtraData
 import com.amap.api.maps.AMap
-import com.amap.api.maps.model.BitmapDescriptor
-import com.amap.api.maps.model.Marker
+import com.amap.api.maps.model.*
 import com.google.gson.JsonObject
 
 /**
@@ -16,68 +17,73 @@ object OrderObj {
     }
 
     fun getMarker(map: AMap, orderObject: JsonObject?, size: Int): Marker? {
-//        if (orderObject == null)
-//            return null
-//
-//        val wgslat = orderObject["LAT"].asDouble
-//        val wgslon = orderObject["LON"].asDouble
-//
-//        val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
-//
-//        val bitmapDescriptor = getCellBitmapDescriptor(siteType, "LTE", size)
-//        val marker = map.addMarker(MarkerOptions()
-//                .setFlat(false)
-//                .icon(bitmapDescriptor)
-//                .alpha(1f)
-//                .draggable(false)
-//                .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
-//                .anchor(0.5f, auchorY)
-//                .infoWindowEnable(true)
-//                .title(cellObject["CELLID"].asString)
-//                .rotateAngle(rotateAngle)
-//                .zIndex(0f)
-//        )
-//
-//        val data = ExtraData(cellObject["CELLID"].asString, MapElementType.mark_Cell.value, cellObject)
-//        marker?.`object` = data
-//
-//        return marker
-        return null
+        if (orderObject == null)
+            return null
+
+        val wgslat = orderObject["LAT"].asDouble
+        val wgslon = orderObject["LON"].asDouble
+
+        val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
+
+        val bitmapDescriptor = getOrderBitmapDescriptor(orderObject, size)
+        val marker = map.addMarker(MarkerOptions()
+                .setFlat(false)
+                .icon(bitmapDescriptor)
+                .alpha(1f)
+                .draggable(false)
+                .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
+                .anchor(0.5f, 0.5f)
+                .infoWindowEnable(true)
+                //.title(cellObject["CELLID"].asString)
+                //.rotateAngle(rotateAngle)
+                .zIndex(0f)
+        )
+
+        val data = ExtraData(orderObject["id"].asString, MapElementType.mark_Order.value, orderObject)
+        marker?.`object` = data
+
+        return marker
     }
 
-    private fun getCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
-//        val key = netWork + "_" + siteType
-//        if (!renderMaps.containsKey(key)) {
-//            //val cellRender = CellRender()
-//            val cellStyle = cellRender.CELL_STYLE_LTE
-//            val cellPath = when (siteType == "2") {true -> cellRender.INNER_CELL_PATH_ADJUST
-//                false -> cellRender.OUT_CELL_PATH_30
-//            }
-//
-//            val scale = size * 1.0f / cellPath.height
-//
-//            val paint = Paint()
-//            paint.color = cellStyle.color
-//
-//            val paintStroke = Paint()
-//            paintStroke.style = Paint.Style.STROKE
-//            paintStroke.color = cellStyle.strokeColor
-//
-//            val path1 = PathParser().createPathFromPathData(cellPath.pathData)
-//            val path = Path()
-//            val matrix = Matrix()
-//            matrix.postScale(scale, scale)
-//            path.addPath(path1, matrix)
-//
-//            val bitmap = Bitmap.createBitmap(
-//                    size, size, Bitmap.Config.ARGB_8888)
-//            val canvas = Canvas(bitmap)
-//            canvas.drawPath(path, paint)//填充图形
-//            canvas.drawPath(path, paintStroke)//外边框
-//            val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
-//            if (bitmapDescriptor != null) renderMaps.put(key, bitmapDescriptor)
-//        }
-//        return renderMaps[key]
-        return null
+    private fun getOrderBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
+        val web_color: String = orderObject["color_fill"].asString
+        val color: Int = Color.parseColor(web_color)
+        val str_color = color.toString()
+        if (!renderMaps.containsKey(str_color)) {
+            val fill_color = Color.parseColor(orderObject["color_out"].asString)
+            val bitmapDescriptor = createArcBitmapDescriptor(size, fill_color, color)
+            renderMaps.put(str_color, bitmapDescriptor)
+        }
+        return renderMaps[str_color]
+    }
+
+    internal fun createArcBitmapDescriptor(width: Int, fillColor: Int, strokeColor: Int): BitmapDescriptor {
+        val scale = width * 1.0f / ObjRender.ORDER_INNER_PATH.width
+
+        val paint_fill = Paint()
+        paint_fill.color = fillColor
+
+        val paint_stroke = Paint()
+        //paint_stroke.setStyle(Paint.Style.STROKE);
+        paint_stroke.color = strokeColor
+
+        val matrix = Matrix()
+        matrix.postScale(scale, scale)
+
+        val path1 = PathParser().createPathFromPathData(ObjRender.ORDER_INNER_PATH.pathData)
+        val path_fill = Path()
+        path_fill.addPath(path1, matrix)
+
+        val path2 = PathParser().createPathFromPathData(ObjRender.ORDER_OUT_PATH.pathData)
+        val path_stroke = Path()
+        path_stroke.addPath(path2, matrix)
+
+        val bitmap = Bitmap.createBitmap(
+                width, width, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawPath(path_fill, paint_fill)
+        canvas.drawPath(path_stroke, paint_stroke)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
+
     }
 }

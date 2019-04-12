@@ -11,7 +11,7 @@ import com.google.gson.JsonObject
  */
 object CellObj {
     private val renderMaps = HashMap<String, BitmapDescriptor>()
-    private val cellRender = CellRender()
+    //private val cellRender = ObjRender()
 
     fun clearRenderMaps() {
         renderMaps.clear()
@@ -61,10 +61,9 @@ object CellObj {
     private fun getCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
         val key = netWork + "_" + siteType
         if (!renderMaps.containsKey(key)) {
-            //val cellRender = CellRender()
-            val cellStyle = cellRender.CELL_STYLE_LTE
-            val cellPath = when (siteType == "2") {true -> cellRender.INNER_CELL_PATH_ADJUST
-                false -> cellRender.OUT_CELL_PATH_30
+            val cellStyle = ObjRender.CELL_STYLE_LTE
+            val cellPath = when (siteType == "2") {true -> ObjRender.CELL_INNER_PATH_ADJUST
+                false -> ObjRender.CELL_OUT_PATH_30
             }
 
             val scale = size * 1.0f / cellPath.height
