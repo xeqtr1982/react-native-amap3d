@@ -77,6 +77,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         )
         eventMap.put("onMapRectSelected", MapBuilder.of("registrationName", "onMapRectSelected"))//返回框选范围
         eventMap.put("onFollowStateChanged", MapBuilder.of("registrationName", "onFollowStateChanged"))//跟随状态发生改变
+        eventMap.put("onMapTiltChanged",MapBuilder.of("registrationName","onMapTiltChanged"))
         return eventMap
     }
 

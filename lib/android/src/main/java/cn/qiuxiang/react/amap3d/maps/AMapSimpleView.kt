@@ -60,6 +60,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     //get() = field
     private var project: Projection? = null
+    private var lastTilt: Float = 0f
 
     fun addElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
@@ -485,6 +486,15 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 val northeast = map.projection.visibleRegion.latLngBounds.northeast
                 data.putDouble("latitudeDelta", Math.abs(southwest.latitude - northeast.latitude))
                 data.putDouble("longitudeDelta", Math.abs(southwest.longitude - northeast.longitude))
+
+                if(it.tilt!=lastTilt && map.mapType==AMap.MAP_TYPE_NORMAL){
+                    val data1 = Arguments.createMap()
+                    data1.putDouble("tilt1", lastTilt.toDouble())
+                    data1.putDouble("tilt2", it.tilt.toDouble())
+                    emit(id, "onMapTiltChanged", data1)
+
+                    lastTilt=it.tilt
+                }
             }
             emit(id, event, data)
         }
