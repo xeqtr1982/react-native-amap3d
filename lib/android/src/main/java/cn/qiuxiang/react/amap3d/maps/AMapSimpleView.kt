@@ -4,12 +4,9 @@ package cn.qiuxiang.react.amap3d.maps
 import android.content.Context
 import android.graphics.Color
 import android.view.MotionEvent
-import cn.qiuxiang.react.amap3d.dt.CellObj
-import cn.qiuxiang.react.amap3d.dt.MapElementType
-import cn.qiuxiang.react.amap3d.dt.ParamObj
+import cn.qiuxiang.react.amap3d.dt.*
 import cn.qiuxiang.react.amap3d.dt.ParamObj.createNewBitmapDescriptor
 import cn.qiuxiang.react.amap3d.dt.ParamObj.getTestPointColor
-import cn.qiuxiang.react.amap3d.dt.TestPoint
 import cn.qiuxiang.react.amap3d.toLatLng
 import cn.qiuxiang.react.amap3d.toLatLngBounds
 import cn.qiuxiang.react.amap3d.toWritableMap
@@ -173,7 +170,22 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
 
     private fun addOrders(args: ReadableArray?) {
-
+        val elementType = args?.getInt(0)!!
+        val targets = args?.getArray(1)!!
+        val size = args?.getInt(2)!!
+        clearElementsByType(elementType)
+        val markers = map_markers[elementType]
+        for (i in 0 until targets.size()) {
+            val target = targets.getMap(i)
+            val orderObject = JsonObject()
+            for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
+                orderObject.addProperty(key, value?.toString())
+            }
+            val marker = OrderObj.getMarker(map, orderObject, size) //getCellMarker(cellObject, size)
+            marker?.let {
+                markers?.add(marker)
+            }
+        }
     }
 
     private fun addCells(args: ReadableArray?) {

@@ -46,15 +46,18 @@ object OrderObj {
     }
 
     private fun getOrderBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
-        val web_color: String = orderObject["color_fill"].asString
-        val color: Int = Color.parseColor(web_color)
-        val str_color = color.toString()
-        if (!renderMaps.containsKey(str_color)) {
-            val fill_color = Color.parseColor(orderObject["color_out"].asString)
-            val bitmapDescriptor = createArcBitmapDescriptor(size, fill_color, color)
-            renderMaps.put(str_color, bitmapDescriptor)
+//        val web_fill_color: String = orderObject["color_fill"].asString
+//        val web_stroke_color:String=orderObject["color_stroke"].asString
+        val fill_color: Int = Color.parseColor(orderObject["color_fill"].asString)
+        val stroke_color:Int=Color.parseColor(orderObject["color_stroke"].asString)
+        val str_fill_color = fill_color.toString()
+        val str_stroke_color=stroke_color.toString()
+        val key=str_fill_color+"_"+str_stroke_color
+        if (!renderMaps.containsKey(key)) {
+            val bitmapDescriptor = createArcBitmapDescriptor(size, fill_color, stroke_color)
+            renderMaps.put(key, bitmapDescriptor)
         }
-        return renderMaps[str_color]
+        return renderMaps[key]
     }
 
     internal fun createArcBitmapDescriptor(width: Int, fillColor: Int, strokeColor: Int): BitmapDescriptor {
