@@ -193,7 +193,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
         following = false
         if (lats.count() == 1)
-            moveTo(LatLng(lats[0], lons[0]))
+            moveTo(markers!!.first().position)
         else {
             lats.sort()
             lons.sort()
@@ -291,7 +291,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
             else
                 clearMarkerList(markers)
             markers.add(it)
-            moveTo(it.position)
+            if (following)
+                moveTo(it.position)
         }
     }
 
@@ -307,7 +308,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 markers.addAll(temp)
                 //_paramMarkers.removeAll({m->m   })
             }
-            moveTo(marker.position)
+            if (following)
+                moveTo(marker.position)
         }
 
     }
@@ -459,7 +461,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 else -> null
             }
             var array = Arguments.createArray()
-            if(markers!=null){
+            if (markers != null) {
                 for (marker in markers!!) {
                     array.pushString((marker.`object` as ExtraData).elementKey)
                 }
@@ -580,15 +582,13 @@ class AMapSimpleView(context: Context) : MapView(context) {
     }
 
     fun moveTo(position: LatLng): Unit {
-        if (following) {
-            val currentCameraPosition = map.cameraPosition
-            var zoomLevel = currentCameraPosition.zoom
-            var tilt = currentCameraPosition.tilt
-            var rotation = currentCameraPosition.bearing
-            val cameraUpdate = CameraUpdateFactory.newCameraPosition(
-                    CameraPosition(position, zoomLevel, tilt, rotation))
-            map.animateCamera(cameraUpdate, null)//animateCallback)
-        }
+        val currentCameraPosition = map.cameraPosition
+        var zoomLevel = currentCameraPosition.zoom
+        var tilt = currentCameraPosition.tilt
+        var rotation = currentCameraPosition.bearing
+        val cameraUpdate = CameraUpdateFactory.newCameraPosition(
+                CameraPosition(position, zoomLevel, tilt, rotation))
+        map.animateCamera(cameraUpdate, null)//animateCallback)
     }
 
     fun maptypeTo(args: ReadableArray?) {
