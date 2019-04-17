@@ -459,9 +459,12 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 else -> null
             }
             var array = Arguments.createArray()
-            for (marker in markers!!) {
-                array.pushString((marker.`object` as ExtraData).elementKey)
+            if(markers!=null){
+                for (marker in markers!!) {
+                    array.pushString((marker.`object` as ExtraData).elementKey)
+                }
             }
+
             var map = data.toWritableMap()
             map.putArray("ids", array)
             emit(id, "onMarkerPress", map)
