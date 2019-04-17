@@ -49,13 +49,35 @@ object CellObj {
                 .infoWindowEnable(true)
                 .title(cellObject["CELLID"].asString)
                 .rotateAngle(rotateAngle)
-                .zIndex(0f)
+                //.zIndex(0f)
         )
 
         val data = ExtraData(cellObject["CELLID"].asString, MapElementType.mark_Cell.value, cellObject)
         marker?.`object` = data
 
         return marker
+    }
+
+    /**
+     * 获取相近位置的所有工单
+     *  @param markers 查询列表
+     *  @param lat
+     *  @param lng
+     *  @param angle 方向角
+     *  @param radius 查询半径，默认值 0.00005
+     *  @param radius_angle 方向角容差，默认值 5
+     */
+    fun getMarkers(markers: MutableList<Marker>, lat: Double, lng: Double, angle: Float, radius: Double = 0.00005, radius_angle: Float = 5F): MutableList<Marker> {
+
+        val list: MutableList<Marker> = mutableListOf()
+        for (marker in markers) {
+            val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
+            if (dis > radius)
+                continue
+            if (Math.abs(marker.rotateAngle - angle) < radius_angle)
+                list.add(marker)
+        }
+        return list
     }
 
     private fun getCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {

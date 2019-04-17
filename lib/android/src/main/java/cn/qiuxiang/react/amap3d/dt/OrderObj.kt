@@ -32,9 +32,9 @@ object OrderObj {
                 .alpha(1f)
                 .draggable(false)
                 .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
-                .anchor(0.5f, 0.5f)
+                .anchor(0.5f, 1.0f)
                 .infoWindowEnable(true)
-                //.title(cellObject["CELLID"].asString)
+                .title(orderObject["id"].asString)
                 //.rotateAngle(rotateAngle)
                 .zIndex(0f)
         )
@@ -45,14 +45,31 @@ object OrderObj {
         return marker
     }
 
+    /**
+     * 获取相近位置的所有工单
+     *  @param markers 查询列表
+     *  @param lat
+     *  @param lng
+     *  @param radius 容差半径
+     */
+    fun getMarkers(markers: MutableList<Marker>, lat: Double, lng: Double, radius: Double = 0.0001): MutableList<Marker> {
+        val list: MutableList<Marker> = mutableListOf()
+        for (marker in markers) {
+            val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
+            if (dis <= radius)
+                list.add(marker)
+        }
+        return list
+    }
+
     private fun getOrderBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
 //        val web_fill_color: String = orderObject["color_fill"].asString
 //        val web_stroke_color:String=orderObject["color_stroke"].asString
         val fill_color: Int = Color.parseColor(orderObject["color_fill"].asString)
-        val stroke_color:Int=Color.parseColor(orderObject["color_stroke"].asString)
+        val stroke_color: Int = Color.parseColor(orderObject["color_stroke"].asString)
         val str_fill_color = fill_color.toString()
-        val str_stroke_color=stroke_color.toString()
-        val key=str_fill_color+"_"+str_stroke_color
+        val str_stroke_color = stroke_color.toString()
+        val key = str_fill_color + "_" + str_stroke_color
         if (!renderMaps.containsKey(key)) {
             val bitmapDescriptor = createArcBitmapDescriptor(size, fill_color, stroke_color)
             renderMaps.put(key, bitmapDescriptor)

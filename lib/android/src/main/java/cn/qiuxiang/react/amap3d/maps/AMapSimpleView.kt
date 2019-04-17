@@ -175,16 +175,36 @@ class AMapSimpleView(context: Context) : MapView(context) {
         val size = args?.getInt(2)!!
         clearElementsByType(elementType)
         val markers = map_markers[elementType]
+        val lats = arrayListOf<Double>()
+        val lons = arrayListOf<Double>()
         for (i in 0 until targets.size()) {
             val target = targets.getMap(i)
             val orderObject = JsonObject()
             for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
                 orderObject.addProperty(key, value?.toString())
             }
+            lats.add(orderObject["LAT"].asDouble)
+            lons.add(orderObject["LON"].asDouble)
+
             val marker = OrderObj.getMarker(map, orderObject, size) //getCellMarker(cellObject, size)
             marker?.let {
                 markers?.add(marker)
             }
+        }
+        following = false
+        if (lats.count() == 1)
+            moveTo(LatLng(lats[0], lons[0]))
+        else {
+            lats.sort()
+            lons.sort()
+            val minlon = lons.first()
+            val minlat = lats.first()
+            val maxlon = lons.last()
+            val maxlat = lats.last()
+            val dlon = (maxlon - minlon) / 4
+            val dlat = (maxlat - minlat) / 4
+
+            map.moveCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds(LatLng(minlat - dlat, minlon - dlon), LatLng(maxlat + dlat, maxlon + dlon)), 0))
         }
     }
 
@@ -401,10 +421,14 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
         map.setOnMapClickListener { latLng ->
 
-            for (markers in map_markers.values) {
-                for (marker in markers) {
-                    marker.hideInfoWindow()
-                }
+            //            for (markers in map_markers.values) {
+//                for (marker in markers) {
+//                    marker.hideInfoWindow()
+//                }
+//            }
+
+            for (marker: Marker in map_markers[MapElementType.mark_GPS.value]!!) {
+                marker.hideInfoWindow()
             }
 
             emit(id, "onPress", latLng.toWritableMap())
@@ -424,18 +448,23 @@ class AMapSimpleView(context: Context) : MapView(context) {
             event.putInt("timestamp", location.time.toInt())
             emit(id, "onLocation", event)
         }
-
         map.setOnMarkerClickListener { marker ->
-
+            //Log.i("ReactNativeJS", "setOnMarkerClickListener")
             marker.showInfoWindow()
-            val data = (marker.`object` as ExtraData).toWritableMap()
-//            val markers = when(data.elementType){
-//                MapElementType.mark_GPS.value-> _paramMarkers
-//                MapElementType.mark_Cell.value->_cellMarkers
-//                else ->null
-//            }
-            //Log.i("marker",data.toString())
-            emit(id, "onMarkerPress", data)
+            val data = (marker.`object` as ExtraData) //.toWritableMap()
+            val markers = when (data.elementType) {
+            //MapElementType.mark_GPS.value-> _paramMarkers
+                MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value]!!, marker.position.latitude, marker.position.longitude, marker.rotateAngle)
+                MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value]!!, marker.position.latitude, marker.position.longitude)
+                else -> null
+            }
+            var array = Arguments.createArray()
+            for (marker in markers!!) {
+                array.pushString((marker.`object` as ExtraData).elementKey)
+            }
+            var map = data.toWritableMap()
+            map.putArray("ids", array)
+            emit(id, "onMarkerPress", map)
             true
         }
 
@@ -499,13 +528,13 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 data.putDouble("latitudeDelta", Math.abs(southwest.latitude - northeast.latitude))
                 data.putDouble("longitudeDelta", Math.abs(southwest.longitude - northeast.longitude))
 
-                if(it.tilt!=lastTilt && map.mapType==AMap.MAP_TYPE_NORMAL){
+                if (it.tilt != lastTilt && map.mapType == AMap.MAP_TYPE_NORMAL) {
                     val data1 = Arguments.createMap()
                     data1.putDouble("tilt1", lastTilt.toDouble())
                     data1.putDouble("tilt2", it.tilt.toDouble())
                     emit(id, "onMapTiltChanged", data1)
 
-                    lastTilt=it.tilt
+                    lastTilt = it.tilt
                 }
             }
             emit(id, event, data)
