@@ -183,12 +183,13 @@ class AMapSimpleView(context: Context) : MapView(context) {
             for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
                 orderObject.addProperty(key, value?.toString())
             }
-            lats.add(orderObject["LAT"].asDouble)
-            lons.add(orderObject["LON"].asDouble)
+
 
             val marker = OrderObj.getMarker(map, orderObject, size) //getCellMarker(cellObject, size)
             marker?.let {
                 markers?.add(marker)
+                lats.add(marker.position.latitude)
+                lons.add(marker.position.longitude)
             }
         }
         following = false
@@ -201,10 +202,15 @@ class AMapSimpleView(context: Context) : MapView(context) {
             val minlat = lats.first()
             val maxlon = lons.last()
             val maxlat = lats.last()
-            val dlon = (maxlon - minlon) / 4
-            val dlat = (maxlat - minlat) / 4
+            if ((maxlon - minlon < 0.0005) && (maxlat - minlat < 0.0005)) {
+                moveTo(LatLng(minlat, minlon))
+            } else {
+                val dlon = (maxlon - minlon) / 4
+                val dlat = (maxlat - minlat) / 4
 
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds(LatLng(minlat - dlat, minlon - dlon), LatLng(maxlat + dlat, maxlon + dlon)), 0))
+                map.moveCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds(LatLng(minlat - dlat, minlon - dlon), LatLng(maxlat + dlat, maxlon + dlon)), 0))
+            }
+
         }
     }
 
