@@ -17,19 +17,28 @@ object CellObj {
         renderMaps.clear()
     }
 
+    /**
+     *
+     * @param map
+     * @param cellObject
+     * @param size LTE宏站尺寸，GSM=LTE*0.7,INNER=LTE*0.5
+     */
     fun getMarker(map: AMap, cellObject: JsonObject?, size: Int): Marker? {
         if (cellObject == null)
             return null
-        val siteType = cellObject["SITETYPE"].asString //2--inner,1--outer
+        val siteType = cellObject["COVER_TYPE"].asString
 
         if (siteType.isNullOrEmpty())
             return null
-        val auchorY = when (siteType == "2") {
+        val auchorY = when (siteType == "室内") {
             true -> 0.5f
             false -> 1.0f
         }
-        val azimuth = cellObject["AZIMUTH"].asFloat
-        val rotateAngle: Float = when (siteType == "2") {
+        val azimuth = when (cellObject["ANTENNA_ANGLE"].isJsonNull) {
+            true -> 0F
+            false -> cellObject["ANTENNA_ANGLE"].asFloat
+        }
+        val rotateAngle: Float = when (siteType == "室内") {
             true -> 0.0f
             false -> 360 - azimuth
         }
@@ -47,12 +56,12 @@ object CellObj {
                 .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
                 .anchor(0.5f, auchorY)
                 .infoWindowEnable(true)
-                .title(cellObject["CELLID"].asString)
+                .title(cellObject["CELL_NAME"].asString)
                 .rotateAngle(rotateAngle)
                 //.zIndex(0f)
         )
 
-        val data = ExtraData(cellObject["CELLID"].asString, MapElementType.mark_Cell.value, cellObject)
+        val data = ExtraData(cellObject["CGI_TCI"].asString, MapElementType.mark_Cell.value, cellObject)
         marker?.`object` = data
 
         return marker
@@ -82,13 +91,59 @@ object CellObj {
 
     private fun getCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
         val key = netWork + "_" + siteType
+
         if (!renderMaps.containsKey(key)) {
-            val cellStyle = ObjRender.CELL_STYLE_LTE
-            val cellPath = when (siteType == "2") {true -> ObjRender.CELL_INNER_PATH_ADJUST
+            val cellStyle = ObjRender.CELL_COLOR
+            val cellPath = when (siteType == "室内") {
+                true -> ObjRender.CELL_GSM_INNER_PATH
                 false -> ObjRender.CELL_OUT_PATH_30
             }
+            var drawSize = size
+            var scale = size * 1.0f / cellPath.height
+            if (siteType == "室内") {
+                scale = scale * 0.5f
+                drawSize = size / 2
+            }
 
-            val scale = size * 1.0f / cellPath.height
+            val paint = Paint()
+            paint.color = cellStyle.color
+            paint.alpha = 100
+
+            val paintStroke = Paint()
+            paintStroke.style = Paint.Style.STROKE
+            paintStroke.color = cellStyle.strokeColor
+            paintStroke.strokeWidth = 2f
+            //paintStroke.setPathEffect()
+
+            val path1 = PathParser().createPathFromPathData(cellPath.pathData)
+            val path = Path()
+            val matrix = Matrix()
+            matrix.postScale(scale, scale)
+            path.addPath(path1, matrix)
+
+            val bitmap = Bitmap.createBitmap(
+                    drawSize, drawSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawPath(path, paint)//填充图形
+            canvas.drawPath(path, paintStroke)//外边框
+            val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
+            if (bitmapDescriptor != null) renderMaps.put(key, bitmapDescriptor)
+        }
+        return renderMaps[key]
+    }
+
+    private fun getOutCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
+        val key = netWork + "_" + siteType
+        if (!renderMaps.containsKey(key)) {
+            val cellStyle = ObjRender.CELL_STYLE_LTE
+            val cellPath = when (siteType == "室内") {
+                true -> ObjRender.CELL_GSM_INNER_PATH
+                false -> ObjRender.CELL_LTE_OUT_PATH
+            }
+
+            var scale = size * 1.0f / cellPath.height
+//            if (siteType == "室内")
+//                scale = scale / 2f
 
             val paint = Paint()
             paint.color = cellStyle.color
@@ -96,6 +151,45 @@ object CellObj {
             val paintStroke = Paint()
             paintStroke.style = Paint.Style.STROKE
             paintStroke.color = cellStyle.strokeColor
+            //paintStroke.setPathEffect()
+
+            val path1 = PathParser().createPathFromPathData(cellPath.pathData)
+            val path = Path()
+            val matrix = Matrix()
+            matrix.postScale(scale, scale)
+            path.addPath(path1, matrix)
+
+            val bitmap = Bitmap.createBitmap(
+                    size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawPath(path, paint)//填充图形
+            canvas.drawPath(path, paintStroke)//外边框
+            val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
+            if (bitmapDescriptor != null) renderMaps.put(key, bitmapDescriptor)
+        }
+        return renderMaps[key]
+    }
+
+    private fun getInnerCellBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
+        val key = netWork + "_" + siteType
+        if (!renderMaps.containsKey(key)) {
+            val cellStyle = ObjRender.CELL_STYLE_LTE
+            val cellPath = when (siteType == "室内") {
+                true -> ObjRender.CELL_GSM_INNER_PATH
+                false -> ObjRender.CELL_LTE_OUT_PATH
+            }
+
+            var scale = size * 1.0f / cellPath.height
+//            if (siteType == "室内")
+//                scale = scale / 2f
+
+            val paint = Paint()
+            paint.color = cellStyle.color
+
+            val paintStroke = Paint()
+            paintStroke.style = Paint.Style.STROKE
+            paintStroke.color = cellStyle.strokeColor
+            //paintStroke.setPathEffect()
 
             val path1 = PathParser().createPathFromPathData(cellPath.pathData)
             val path = Path()

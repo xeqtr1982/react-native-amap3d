@@ -36,7 +36,7 @@ object OrderObj {
                 //.infoWindowEnable(true)
                 //.title(orderObject["id"].asString)
                 //.rotateAngle(rotateAngle)
-                .zIndex(0f)
+                .zIndex(10f)
         )
 
         val data = ExtraData(orderObject["id"].asString, MapElementType.mark_Order.value, orderObject)

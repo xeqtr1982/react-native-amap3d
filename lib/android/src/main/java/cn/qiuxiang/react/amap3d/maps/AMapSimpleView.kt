@@ -59,6 +59,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
     private var project: Projection? = null
     private var lastTilt: Float = 0f
 
+    //region 通用方法
+
     fun addElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         if (!map_markers.containsKey(elementType))
@@ -153,6 +155,10 @@ class AMapSimpleView(context: Context) : MapView(context) {
     }
 
     fun changeElementsStyle(args: ReadableArray?) {}
+
+
+    //endregion
+
 
     //region getMarker
 
@@ -251,6 +257,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     }
 
+    //region testpoint
     private fun addTestPoint(args: ReadableArray?) {
         //Log.i("android addTestPoint", args.toString())
         //Log.i("AmapSimpleView", "addTestPoint")
@@ -265,7 +272,6 @@ class AMapSimpleView(context: Context) : MapView(context) {
             testPoint.addProperty(key, value?.toString())
         _addTestPoint(map_markers[elementType]!!, testPoint, size, testStatus)
     }
-
 
     private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
         when (testStatus) {
@@ -358,6 +364,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
 
     }
+
+    //endregion
 
     fun changeRenderField(args: ReadableArray?) {
         ParamObj.clearRenderMaps()
@@ -508,6 +516,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
             //map.moveCamera(CameraUpdateFactory.zoomTo(17f))
         }
 
+        //region 未使用地图事件
+
 //        map.setOnInfoWindowClickListener { marker ->
 //            emit(markers[marker.id]?.id, "onInfoWindowPress")
 //        }
@@ -525,6 +535,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
 //        }
 //
 //        map.setInfoWindowAdapter(AMapInfoWindowAdapter(context, markers))
+
+        //endregion
     }
 
     fun emitCameraChangeEvent(event: String, position: CameraPosition?) {
