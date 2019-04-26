@@ -25,7 +25,7 @@ object OrderObj {
 
         val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
 
-        val bitmapDescriptor = getOrderBitmapDescriptor(orderObject, size)
+        val bitmapDescriptor = getOriginalBitmapDescriptor(orderObject, size)
         val marker = map.addMarker(MarkerOptions()
                 .setFlat(false)
                 .icon(bitmapDescriptor)
@@ -39,7 +39,7 @@ object OrderObj {
                 .zIndex(10f)
         )
 
-        val data = ExtraData(orderObject["id"].asString, MapElementType.mark_Order.value, orderObject)
+        val data = ExtraData(orderObject["id"].asString, MapElementType.mark_Order.value,size, orderObject)
         marker?.`object` = data
 
         return marker
@@ -62,7 +62,20 @@ object OrderObj {
         return list
     }
 
-    private fun getOrderBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
+    fun getSelectBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
+        val fill_color: Int = Color.parseColor(orderObject["color_fill"].asString)
+        val stroke_color: Int = Color.parseColor(orderObject["color_stroke"].asString)
+        val str_fill_color = fill_color.toString()
+        val str_stroke_color = stroke_color.toString()
+        val key = str_fill_color + "_" + str_stroke_color + "_selected"
+        if (!renderMaps.containsKey(key)) {
+            val bitmapDescriptor = createArcBitmapDescriptor(size, fill_color, stroke_color)
+            renderMaps.put(key, bitmapDescriptor)
+        }
+        return renderMaps[key]
+    }
+
+    fun getOriginalBitmapDescriptor(orderObject: JsonObject, size: Int): BitmapDescriptor? {
 //        val web_fill_color: String = orderObject["color_fill"].asString
 //        val web_stroke_color:String=orderObject["color_stroke"].asString
         val fill_color: Int = Color.parseColor(orderObject["color_fill"].asString)

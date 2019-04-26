@@ -5,8 +5,6 @@ import android.content.Context
 import android.graphics.Color
 import android.view.MotionEvent
 import cn.qiuxiang.react.amap3d.dt.*
-import cn.qiuxiang.react.amap3d.dt.ParamObj.createNewBitmapDescriptor
-import cn.qiuxiang.react.amap3d.dt.ParamObj.getTestPointColor
 import cn.qiuxiang.react.amap3d.toLatLng
 import cn.qiuxiang.react.amap3d.toLatLngBounds
 import cn.qiuxiang.react.amap3d.toWritableMap
@@ -39,12 +37,14 @@ class AMapSimpleView(context: Context) : MapView(context) {
     private val map_polygons = HashMap<Int, MutableList<Polygon>>()
     private var save_TestPoints: MutableList<TestPoint> = mutableListOf()
 
+    private var selectMarker: Marker? = null //选中标记
+    private var selectMarkerList: MutableList<Marker> = mutableListOf()
+
+    private var serviceCellMarker: Marker? = null//主服务小区
+
     private val maxTestPointCount = 100 //最多绘制测试点数
     private val maxTestLinesCount = 12 //最多绘制线段数
     private val maxlinePointsCount = 80 //每条线段的点数，必须小于maxTestPointCount
-    private val renderFields = arrayOf("RSRP", "RxLev")//private var renderField="RSRP"
-    private val renderMaps = HashMap<String, BitmapDescriptor>()
-    //private val cellRenderMaps = HashMap<String, BitmapDescriptor>()
 
 
     private var _touchCount: Int = 0 //是否手动拖动地图的判断值
@@ -60,6 +60,58 @@ class AMapSimpleView(context: Context) : MapView(context) {
     private var lastTilt: Float = 0f
 
     //region 通用方法
+
+    fun selectElement(args: ReadableArray?) {
+        if (selectMarker != null)
+            removeSelectMarker()
+        val id: String? = args?.getString(1)
+        if (!id.isNullOrEmpty()) {
+            val elementType: Int = args?.getInt(0)!!
+            if (map_markers.containsKey(elementType)) {
+//                var elements = map_markers[elementType]!!
+//                selectMarkerList?.let {
+                if (selectMarkerList.any()) {
+                    for (marker in selectMarkerList) {
+                        val extData = (marker.`object` as ExtraData)!!
+                        if (extData.elementKey == id) {
+                            val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
+                                MapElementType.mark_Cell.value -> {
+                                    val cellObject = extData.elementValue!!
+                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+                                }
+                                else -> null
+                            }
+                            selectMarker = marker
+                            selectMarker?.setIcon(bitmapDescriptor)
+                            selectMarker?.showInfoWindow()
+                            break
+                        }
+                    }
+                }
+            }
+            //}
+        } else {
+            //removeSelectMarker()
+        }
+
+    }
+
+    private fun removeSelectMarker() {
+        selectMarker?.let {
+            if (it.isInfoWindowShown)
+                it.hideInfoWindow()
+            val extData = (it.`object` as ExtraData)!!
+            val cellObject = extData.elementValue!!
+            val bitmapDescriptor =
+                    when (extData.elementType) {
+                        MapElementType.mark_Cell.value -> CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+                        else -> null
+                    }
+
+            it.setIcon(bitmapDescriptor)
+            selectMarker = null
+        }
+    }
 
     fun addElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
@@ -314,11 +366,9 @@ class AMapSimpleView(context: Context) : MapView(context) {
             if (markers.count() > maxTestPointCount) {
                 val testPoints = markers.subList(0, maxlinePointsCount)
                 _addTestLine(testPoints)
-                //val mk=_paramMarkers[maxTestPointCount];
                 val temp = markers.drop(maxlinePointsCount).toMutableList()
                 markers.clear()
                 markers.addAll(temp)
-                //_paramMarkers.removeAll({m->m   })
             }
             if (following)
                 moveTo(marker.position)
@@ -338,7 +388,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 for (index in it.indices) {
                     coordinates.add(it[index]?.position)
                     if (index > 0)
-                        colors.add(getTestPointColor((it[index]?.`object` as ExtraData)?.elementValue!!))//(it[index]?.`object` as ExtraData).elementValue["KeyColor"]?.toString()?.toInt())
+                        colors.add(ParamObj.getTestPointColor((it[index]?.`object` as ExtraData)?.elementValue!!))//(it[index]?.`object` as ExtraData).elementValue["KeyColor"]?.toString()?.toInt())
 
                     //移除了选中测试点，清除相关内容
                 }
@@ -393,12 +443,12 @@ class AMapSimpleView(context: Context) : MapView(context) {
                         }
                     }
                     val key = color.toString()
-                    if (!renderMaps.containsKey(key)) {
-                        val bitmapDescriptor: BitmapDescriptor? = createNewBitmapDescriptor(size, color)
-                        if (bitmapDescriptor != null) renderMaps.put(key, bitmapDescriptor)
+                    if (!ParamObj.renderMaps.containsKey(key)) {
+                        val bitmapDescriptor: BitmapDescriptor? = ParamObj.createNewBitmapDescriptor(size, color)
+                        if (bitmapDescriptor != null) ParamObj.renderMaps.put(key, bitmapDescriptor)
 
                     }
-                    marker.setIcon(renderMaps[key])
+                    marker.setIcon(ParamObj.renderMaps[key])
                 }
             }
         }
@@ -422,12 +472,27 @@ class AMapSimpleView(context: Context) : MapView(context) {
         val leftbottom = project?.fromScreenLocation(android.graphics.Point(minx, maxy))!!
         val righttop = project?.fromScreenLocation(android.graphics.Point(maxx, miny))!!
 
+//        val wgs_leftbottom = BetrayLatLng.gcj_decrypt(leftbottom.latitude, leftbottom.longitude)
+//        val wgs_righttop = BetrayLatLng.gcj_decrypt(righttop.latitude, righttop.longitude)
+//        Log.i("ReactNativeJS","wgs_rect "+wgs_leftbottom[0].toString()+","+wgs_leftbottom[1].toString()+","+wgs_righttop[0].toString()+","+wgs_righttop[1].toString())
+        val markers = when (elementType) {
+            MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[elementType], leftbottom.latitude, leftbottom.longitude, righttop.latitude, righttop.longitude)
+            else -> mutableListOf()
+        }
+        var array = Arguments.createArray()
+        if (markers.any()) {
+            for (marker in markers) {
+                array.pushString((marker.`object` as ExtraData).elementKey)
+            }
+        }
+
         val data: WritableMap = Arguments.createMap()
         data.putInt("elementType", elementType)
         data.putDouble("min_lon", leftbottom.longitude)
         data.putDouble("min_lat", leftbottom.latitude)
         data.putDouble("max_lon", righttop.longitude)
         data.putDouble("max_lat", righttop.latitude)
+        data.putArray("ids", array)
         emit(id, "onMapRectSelected", data)
     }
 
@@ -447,6 +512,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 marker.hideInfoWindow()
             }
 
+            removeSelectMarker()
             emit(id, "onPress", latLng.toWritableMap())
         }
 
@@ -465,22 +531,21 @@ class AMapSimpleView(context: Context) : MapView(context) {
             emit(id, "onLocation", event)
         }
         map.setOnMarkerClickListener { marker ->
-            //Log.i("ReactNativeJS", "setOnMarkerClickListener")
             marker.showInfoWindow()
-            val data = (marker.`object` as ExtraData) //.toWritableMap()
-            val markers = when (data.elementType) {
+            //Log.i("ReactNativeJS", "setOnMarkerClickListener")
+            val data = (marker.`object` as ExtraData)
+            selectMarkerList = when (data.elementType) {
             //MapElementType.mark_GPS.value-> _paramMarkers
                 MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value]!!, marker.position.latitude, marker.position.longitude, marker.rotateAngle)
                 MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value]!!, marker.position.latitude, marker.position.longitude)
-                else -> null
+                else -> mutableListOf()
             }
             var array = Arguments.createArray()
-            if (markers != null) {
-                for (marker in markers!!) {
+            if (selectMarkerList.count() > 0) {
+                for (marker in selectMarkerList!!) {
                     array.pushString((marker.`object` as ExtraData).elementKey)
                 }
             }
-
             var map = data.toWritableMap()
             map.putArray("ids", array)
             emit(id, "onMarkerPress", map)
@@ -646,4 +711,4 @@ class AMapSimpleView(context: Context) : MapView(context) {
 }
 
 //data class ExtraData(var elementKey: String, var elementType: Int, var elementValue: HashMap<String, Float>?)
-data class ExtraData(var elementKey: String, var elementType: Int, var elementValue: JsonObject?)
+data class ExtraData(var elementKey: String, var elementType: Int, var elementSize: Int, var elementValue: JsonObject?)

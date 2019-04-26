@@ -28,6 +28,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         val REMOVE_ELEMENTS = 23
         val CHANGE_ELEMENTS_VISIBLE = 24
         val CHANGE_ELEMENTS_STYLE = 25
+        val SELECT_ELEMENT = 26
 
         val FROM_SCREEN_XY = 51
         val FROM_SCREEN_RECT = 52
@@ -46,7 +47,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
                 "changeFollow" to CHANGE_FOLLOW, "changeRenderField" to CHANGE_RENDER_FIELD,
                 "addElements" to ADD_ELEMENTS, "addElement" to ADD_ELEMENT, "removeElements" to REMOVE_ELEMENTS,
                 "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE, "changeElementsStyle" to CHANGE_ELEMENTS_STYLE,
-                "fromScreenXY" to FROM_SCREEN_XY,"fromScreenRect" to FROM_SCREEN_RECT
+                "fromScreenXY" to FROM_SCREEN_XY, "fromScreenRect" to FROM_SCREEN_RECT, "selectElement" to SELECT_ELEMENT
         )
     }
 
@@ -61,13 +62,14 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
             REMOVE_ELEMENTS -> root?.removeElements(args)
             CHANGE_ELEMENTS_VISIBLE -> root?.changeElementsVisible(args)
             CHANGE_ELEMENTS_STYLE -> root?.changeElementsStyle(args)
+            SELECT_ELEMENT -> root?.selectElement(args)
             FROM_SCREEN_XY -> root?.fromScreenXY(args)
-            FROM_SCREEN_RECT->root?.fromScreenRect(args)
+            FROM_SCREEN_RECT -> root?.fromScreenRect(args)
         }
     }
 
     override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-        val eventMap=MapBuilder.of(
+        val eventMap = MapBuilder.of(
                 "onPress", MapBuilder.of("registrationName", "onPress"),
                 "onLongPress", MapBuilder.of("registrationName", "onLongPress"),
                 "onMarkerPress", MapBuilder.of("registrationName", "onMarkerPress"),
@@ -77,7 +79,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         )
         eventMap.put("onMapRectSelected", MapBuilder.of("registrationName", "onMapRectSelected"))//返回框选范围
         eventMap.put("onFollowStateChanged", MapBuilder.of("registrationName", "onFollowStateChanged"))//跟随状态发生改变
-        eventMap.put("onMapTiltChanged",MapBuilder.of("registrationName","onMapTiltChanged"))
+        eventMap.put("onMapTiltChanged", MapBuilder.of("registrationName", "onMapTiltChanged"))
         return eventMap
     }
 

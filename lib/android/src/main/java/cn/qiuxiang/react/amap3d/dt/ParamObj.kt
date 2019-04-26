@@ -14,7 +14,7 @@ import com.google.gson.JsonObject
  * Created by lee on 2019/3/19.
  */
 object ParamObj {
-    private val renderMaps = HashMap<String, BitmapDescriptor>()
+    val renderMaps = HashMap<String, BitmapDescriptor>()
     fun clearRenderMaps() {
         renderMaps.clear()
     }
@@ -48,7 +48,7 @@ object ParamObj {
             //    MapElementType.mark_GPS.name
             //    MapElementType.mark_Event.ordinal
             val key = testPoint["frameNum"].asString
-            val data = ExtraData(key, MapElementType.mark_GPS.value, testPoint)
+            val data = ExtraData(key, MapElementType.mark_GPS.value,size, testPoint)
             marker?.`object` = data
             marker.isClickable = true
 
