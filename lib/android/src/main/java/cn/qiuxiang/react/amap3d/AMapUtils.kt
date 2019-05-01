@@ -45,18 +45,25 @@ fun ExtraData.toWritableMap(): WritableMap {
     val map = Arguments.createMap()
     map.putString("elementKey", this.elementKey)
     map.putInt("elementType", this.elementType)
-    map.putMap("elementValue",this.elementValue?.toWritableMap())
+    map.putInt("elementSize", this.elementSize)
+    map.putMap("elementValue", this.elementValue?.toWritableMap())
     return map
 }
 
 //只针对简单对象，测试点
 fun JsonObject.toWritableMap(): WritableMap {
     val map = Arguments.createMap()
-    for ((key, value) in this.entrySet())
-    //if (value is JsonObject)
-        map.putString(key, value.asString)
+    for ((key, value) in this.entrySet()) {
+        //if (value is JsonObject)
+        val str_value: String = when (value.isJsonNull) {
+            true -> ""
+            false -> value.asString
+        }
+        map.putString(key, str_value)
 //        else if (value is JsonArray)
 //            map.putArray(key, null)
+    }
+
     return map
 }
 

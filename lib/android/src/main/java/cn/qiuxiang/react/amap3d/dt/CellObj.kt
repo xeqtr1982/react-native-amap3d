@@ -128,6 +128,9 @@ object CellObj {
             if (siteType == "室内") {
                 scale = scale * 0.5f
                 drawSize = size / 2
+            } else if (netWork == "LTE") {
+                scale = scale * 0.75f
+                drawSize = 3 * size / 4
             }
 
             val paint = Paint()
@@ -269,7 +272,7 @@ object CellObj {
         //return markers.filter { }
 
         val list: MutableList<Marker> = mutableListOf()
-        if(markers!=null && markers.count()>0){
+        if (markers != null && markers.count() > 0) {
             for (marker in markers) {
                 if (marker.position.latitude > min_lat && marker.position.latitude < max_lat && marker.position.longitude > min_lng && marker.position.longitude < max_lng) {
                     list.add(marker)
