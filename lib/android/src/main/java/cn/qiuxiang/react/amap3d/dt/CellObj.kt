@@ -84,7 +84,7 @@ object CellObj {
             var drawSize = (size * 1.5).toInt()
             var scale = drawSize * 1.0f / cellPath.height
             if (siteType == "室内") {
-                scale = scale * 0.5f
+                scale = scale * 0.7f
                 drawSize = (drawSize * 0.7).toInt()
             }
 

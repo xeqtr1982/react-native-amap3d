@@ -21,6 +21,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         val MAPTYPE_TO = 2
         val CHANGEUI_TO = 3
         val CHANGE_FOLLOW = 4//改变地图跟随状态
+        val CHANGE_MEASURE = 5 //改变地图测距状态
         val CHANGE_RENDER_FIELD = 19
 
         val ADD_ELEMENTS = 21
@@ -44,7 +45,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
 
     override fun getCommandsMap(): Map<String, Int> {
         return mapOf("animateTo" to ANIMATE_TO, "maptypeTo" to MAPTYPE_TO, "changeUI" to CHANGEUI_TO,
-                "changeFollow" to CHANGE_FOLLOW, "changeRenderField" to CHANGE_RENDER_FIELD,
+                "changeFollow" to CHANGE_FOLLOW, "changeMeasure" to CHANGE_MEASURE, "changeRenderField" to CHANGE_RENDER_FIELD,
                 "addElements" to ADD_ELEMENTS, "addElement" to ADD_ELEMENT, "removeElements" to REMOVE_ELEMENTS,
                 "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE, "changeElementsStyle" to CHANGE_ELEMENTS_STYLE,
                 "fromScreenXY" to FROM_SCREEN_XY, "fromScreenRect" to FROM_SCREEN_RECT, "selectElement" to SELECT_ELEMENT
@@ -56,6 +57,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
             ANIMATE_TO -> root?.animateTo(args)
             MAPTYPE_TO -> root?.maptypeTo(args)
             CHANGE_FOLLOW -> root?.following = true
+            CHANGE_MEASURE -> root?.measuring = args?.getBoolean(0)!!
             CHANGE_RENDER_FIELD -> root?.changeRenderField(args)
             ADD_ELEMENTS -> root?.addElements(args)
             ADD_ELEMENT -> root?.addElement(args)

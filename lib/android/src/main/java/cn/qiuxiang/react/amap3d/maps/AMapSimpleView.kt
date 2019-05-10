@@ -3,6 +3,7 @@ package cn.qiuxiang.react.amap3d.maps
 //import com.amap.api.maps.model.BitmapDescriptor
 import android.content.Context
 import android.graphics.Color
+import android.util.Log
 import android.view.MotionEvent
 import cn.qiuxiang.react.amap3d.dt.*
 import cn.qiuxiang.react.amap3d.toLatLng
@@ -58,6 +59,20 @@ class AMapSimpleView(context: Context) : MapView(context) {
     //get() = field
     private var project: Projection? = null
     private var lastTilt: Float = 0f
+
+    val infoAdapter = CustomInfoWindowAdapter()
+    var measuring: Boolean = false //是否处于测量状态
+        set(value) {
+            field = value
+            when (value) {
+                true -> map.setInfoWindowAdapter(infoAdapter)
+                false -> {
+                    map.setInfoWindowAdapter(null)
+                    MeasureObj.clearMeasurePoints()
+                }
+            }
+        }
+
 
     //region 通用方法
 
@@ -499,21 +514,27 @@ class AMapSimpleView(context: Context) : MapView(context) {
     init {
         super.onCreate(null)
         project = map.projection
+        MeasureObj.context = this.context
 
         map.setOnMapClickListener { latLng ->
+            if (measuring) {
+                Log.i("ReactNativeJS","setOnMapClickListener")
+                MeasureObj.addMeasurePoint(map, latLng)
+            } else {
+                //            for (markers in map_markers.values) {
+                //                for (marker in markers) {
+                //                    marker.hideInfoWindow()
+                //                }
+                //            }
 
-            //            for (markers in map_markers.values) {
-//                for (marker in markers) {
-//                    marker.hideInfoWindow()
-//                }
-//            }
+                for (marker: Marker in map_markers[MapElementType.mark_GPS.value]!!) {
+                    marker.hideInfoWindow()
+                }
 
-            for (marker: Marker in map_markers[MapElementType.mark_GPS.value]!!) {
-                marker.hideInfoWindow()
+                removeSelectMarker()
+                emit(id, "onPress", latLng.toWritableMap())
             }
 
-            removeSelectMarker()
-            emit(id, "onPress", latLng.toWritableMap())
         }
 
         map.setOnMapLongClickListener { latLng ->
@@ -531,24 +552,31 @@ class AMapSimpleView(context: Context) : MapView(context) {
             emit(id, "onLocation", event)
         }
         map.setOnMarkerClickListener { marker ->
-            marker.showInfoWindow()
-            //Log.i("ReactNativeJS", "setOnMarkerClickListener")
-            val data = (marker.`object` as ExtraData)
-            selectMarkerList = when (data.elementType) {
-            //MapElementType.mark_GPS.value-> _paramMarkers
-                MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value]!!, marker.position.latitude, marker.position.longitude, marker.rotateAngle)
-                MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value]!!, marker.position.latitude, marker.position.longitude)
-                else -> mutableListOf()
-            }
-            var array = Arguments.createArray()
-            if (selectMarkerList.count() > 0) {
-                for (marker in selectMarkerList!!) {
-                    array.pushString((marker.`object` as ExtraData).elementKey)
+            if (measuring) {//只显示测距信息
+                if (marker.`object` is Int) {
+                    marker.showInfoWindow()
                 }
+            } else {
+                marker.showInfoWindow()
+                //Log.i("ReactNativeJS", "setOnMarkerClickListener")
+                val data = (marker.`object` as ExtraData)
+                selectMarkerList = when (data.elementType) {
+                //MapElementType.mark_GPS.value-> _paramMarkers
+                    MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value]!!, marker.position.latitude, marker.position.longitude, marker.rotateAngle)
+                    MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value]!!, marker.position.latitude, marker.position.longitude)
+                    else -> mutableListOf()
+                }
+                var array = Arguments.createArray()
+                if (selectMarkerList.count() > 0) {
+                    for (marker in selectMarkerList!!) {
+                        array.pushString((marker.`object` as ExtraData).elementKey)
+                    }
+                }
+                var map = data.toWritableMap()
+                map.putArray("ids", array)
+                emit(id, "onMarkerPress", map)
             }
-            var map = data.toWritableMap()
-            map.putArray("ids", array)
-            emit(id, "onMarkerPress", map)
+
             true
         }
 
