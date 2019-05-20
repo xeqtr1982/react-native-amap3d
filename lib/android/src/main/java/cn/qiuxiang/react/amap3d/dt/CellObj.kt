@@ -11,11 +11,26 @@ import com.google.gson.JsonObject
  */
 object CellObj {
     private val renderMaps = HashMap<String, BitmapDescriptor>()
+    var cell_objects = HashMap<String, Marker>()
+
+    val keys: Array<String> = arrayOf("21_17497346", "337_21782017", "22909697", "192_23840022", "293_25272331", "127001221", "364_22061313", "23866885")
     //private val cellRender = ObjRender()
+
+//    //[min_lng,min_lat,max_lng,max_lat]
+//    val envelope: Array<Double> = arrayOf(Double.MAX_VALUE, Double.MAX_VALUE, Double.MIN_VALUE, Double.MIN_VALUE)
+//
+//    fun clearEnvelope() {
+//        envelope[0] = Double.MAX_VALUE
+//        envelope[1] = Double.MAX_VALUE
+//        envelope[2] = Double.MIN_VALUE
+//        envelope[3] = Double.MIN_VALUE
+//    }
+
 
     fun clearRenderMaps() {
         renderMaps.clear()
     }
+
 
     /**
      *
@@ -49,6 +64,12 @@ object CellObj {
         val wgslat = cellObject["LAT"].asDouble
         val wgslon = cellObject["LON"].asDouble
 
+//        if (wgslon < envelope[0]) envelope[0] = wgslon
+//        if (wgslat < envelope[1]) envelope[1] = wgslat
+//        if (wgslon > envelope[2]) envelope[2] = wgslon
+//        if (wgslat > envelope[3]) envelope[3] = wgslat
+
+
         val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
 
 
@@ -68,9 +89,16 @@ object CellObj {
         val data = ExtraData(cellObject["CGI_TCI"].asString, MapElementType.mark_Cell.value, size, cellObject)
         marker?.`object` = data
 
+
+        val key = when (netWork) {
+            "LTE" -> cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
+            else -> cellObject["LAC_TAC"].asString + "_" + cellObject["CELL_ID"].asString //"GSM"
+        }
+        //val key = cellObject["CELL_ID"].asString
+        cell_objects.put(key, marker)
+
         return marker
     }
-
 
     fun getSelectBitmapDescriptor(siteType: String, netWork: String, size: Int): BitmapDescriptor? {
         val key = netWork + "_" + siteType + "_selected"

@@ -22,6 +22,7 @@ import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import java.util.*
 
 /**
  * Created by lee on 2019/1/23.
@@ -33,6 +34,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         locationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
         locationStyle
     }
+
     private var map_markers = HashMap<Int, MutableList<Marker>>()
     private val map_lines = HashMap<Int, MutableList<Polyline>>()
     private val map_polygons = HashMap<Int, MutableList<Polygon>>()
@@ -59,6 +61,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
     //get() = field
     private var project: Projection? = null
     private var lastTilt: Float = 0f
+    private var lastZoom: Float = 0f//上次地图操作后的zoomlevel值
 
     val infoAdapter = CustomInfoWindowAdapter()
     var measuring: Boolean = false //是否处于测量状态
@@ -226,22 +229,6 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
     //endregion
 
-
-    //region getMarker
-
-//    private fun getMarker(elementType: Int, element: JsonObject?, size: Int): Marker? {
-//        var marker: Marker? = null
-//        when (elementType) {
-//            MapElementType.mark_GPS.value -> marker = getParamMarker(element, size) //addtestpoints
-//            MapElementType.mark_Cell.value -> marker = CellObj.getMarker(map,element, size) //addcells
-//            MapElementType.mark_Order.value -> marker = getOrderMarker(element, size) //addorders
-//        }
-//        return marker
-//    }
-
-    //endregion
-
-
     private fun addOrders(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         val targets = args?.getArray(1)!!
@@ -293,6 +280,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
         val targets = args?.getArray(1)!!
         val size = args?.getInt(2)!!
         clearElementsByType(elementType)
+        CellObj.cell_objects.clear()
+        //CellObj.clearEnvelope()
         val markers = map_markers[elementType]
         for (i in 0 until targets.size()) {
             val target = targets.getMap(i)
@@ -302,7 +291,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
             }
             val marker = CellObj.getMarker(map, cellObject, size) //getCellMarker(cellObject, size)
             marker?.let {
-                markers?.add(marker)
+                markers?.add(it)//marker)
             }
         }
         //map.runOnDrawFrame()//refresh map
@@ -324,6 +313,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     }
 
+    var tempCount: Int = 0
     //region testpoint
     private fun addTestPoint(args: ReadableArray?) {
         //Log.i("android addTestPoint", args.toString())
@@ -338,6 +328,44 @@ class AMapSimpleView(context: Context) : MapView(context) {
         for ((key, value) in target.toHashMap())
             testPoint.addProperty(key, value?.toString())
         _addTestPoint(map_markers[elementType]!!, testPoint, size, testStatus)
+
+//        val key = when (testPoint["network"].asString) {
+//            "LTE" -> testPoint["enodebid"].asString + "_" + testPoint["ci"].asString
+//            else -> testPoint["lac"].asString + "_" + testPoint["ci"].asString //"GSM"
+//        }
+
+        tempCount = tempCount + 1
+        Log.i("ReactNativeJS",tempCount.toString())
+        var index = tempCount / 10
+        if (index > 7) index = 7
+        val key = CellObj.keys[index] //Random().nextInt(6)
+        Log.i("ReactNativeJS",key)
+        if (CellObj.cell_objects.containsKey(key)) {
+            val lat = testPoint["GCJ_LAT"].asDouble
+            val lon = testPoint["GCJ_LON"].asDouble
+
+            if(ConnectionLineObj.clines.size>0){
+                if(ConnectionLineObj.clines[0].simpleCell.ID != key){//切换了主小区，重新创建连线
+                    Log.i("ReactNativeJS","change service cell")
+                    ConnectionLineObj.clearData()
+                    val cl :ConnectionLine = ConnectionLine(LatLng(lat,lon),true,CellObj.cell_objects[key]!!)
+                    ConnectionLineObj.addConnectionLine(map,cl)
+                }
+                else{
+                    //未切换主小区，不处理，暂不考虑邻区
+                    Log.i("ReactNativeJS","same service cell")
+                }
+            }
+            else{// 第一次连线
+                Log.i("ReactNativeJS","first service cell line")
+                val cl :ConnectionLine = ConnectionLine(LatLng(lat,lon),true,CellObj.cell_objects[key]!!)
+                ConnectionLineObj.addConnectionLine(map,cl)
+            }
+        }
+        else
+        {
+            Log.i("ReactNativeJS","service cell not found")
+        }
     }
 
     private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
@@ -518,7 +546,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
         map.setOnMapClickListener { latLng ->
             if (measuring) {
-                Log.i("ReactNativeJS","setOnMapClickListener")
+                Log.i("ReactNativeJS", "setOnMapClickListener")
                 MeasureObj.addMeasurePoint(map, latLng)
             } else {
                 //            for (markers in map_markers.values) {
@@ -594,6 +622,15 @@ class AMapSimpleView(context: Context) : MapView(context) {
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
             override fun onCameraChangeFinish(position: CameraPosition?) {
                 emitCameraChangeEvent("onStatusChangeComplete", position)
+                //重新计算连线
+                if (map_markers.containsKey(MapElementType.mark_Cell.value)) {
+                    position?.let {
+                        if (Math.abs(lastZoom - it.zoom) > 1f) {
+                            ConnectionLineObj.refreshLines()
+                            lastZoom = it.zoom
+                        }
+                    }
+                }
             }
 
             override fun onCameraChange(position: CameraPosition?) {
