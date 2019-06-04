@@ -13,19 +13,7 @@ object CellObj {
     private val renderMaps = HashMap<String, BitmapDescriptor>()
     var cell_objects = HashMap<String, Marker>()
 
-    val keys: Array<String> = arrayOf("21_17497346", "337_21782017", "22909697", "192_23840022", "293_25272331", "127001221", "364_22061313", "23866885")
-    //private val cellRender = ObjRender()
-
-//    //[min_lng,min_lat,max_lng,max_lat]
-//    val envelope: Array<Double> = arrayOf(Double.MAX_VALUE, Double.MAX_VALUE, Double.MIN_VALUE, Double.MIN_VALUE)
-//
-//    fun clearEnvelope() {
-//        envelope[0] = Double.MAX_VALUE
-//        envelope[1] = Double.MAX_VALUE
-//        envelope[2] = Double.MIN_VALUE
-//        envelope[3] = Double.MIN_VALUE
-//    }
-
+    //val keys: Array<String> = arrayOf("141_23820061", "129_23866395", "142_23820062", "130_23866396", "129_23866395", "131_23866397")
 
     fun clearRenderMaps() {
         renderMaps.clear()
@@ -64,14 +52,7 @@ object CellObj {
         val wgslat = cellObject["LAT"].asDouble
         val wgslon = cellObject["LON"].asDouble
 
-//        if (wgslon < envelope[0]) envelope[0] = wgslon
-//        if (wgslat < envelope[1]) envelope[1] = wgslat
-//        if (wgslon > envelope[2]) envelope[2] = wgslon
-//        if (wgslat > envelope[3]) envelope[3] = wgslat
-
-
         val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
-
 
         val marker = map.addMarker(MarkerOptions()
                 .setFlat(true)
@@ -91,10 +72,9 @@ object CellObj {
 
 
         val key = when (netWork) {
-            "LTE" -> cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
-            else -> cellObject["LAC_TAC"].asString + "_" + cellObject["CELL_ID"].asString //"GSM"
+            "LTE" ->cellObject["CELL_ID"].asString // cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
+            else -> cellObject["CGI_TCI"].asString  //"GSM"
         }
-        //val key = cellObject["CELL_ID"].asString
         cell_objects.put(key, marker)
 
         return marker
@@ -266,7 +246,7 @@ object CellObj {
 
 
     /**
-     * 获取相近位置的所有工单
+     * 获取相近位置的所有对象
      *  @param markers 查询列表
      *  @param lat
      *  @param lng
@@ -274,28 +254,34 @@ object CellObj {
      *  @param radius 查询半径，默认值 0.00005
      *  @param radius_angle 方向角容差，默认值 5
      */
-    fun getMarkers(markers: MutableList<Marker>, lat: Double, lng: Double, angle: Float, radius: Double = 0.00005, radius_angle: Float = 5F): MutableList<Marker> {
+    fun getMarkers(markers: MutableList<Marker>?, lat: Double, lng: Double, angle: Float, radius: Double = 0.00005, radius_angle: Float = 5F): MutableList<Marker> {
 
         val list: MutableList<Marker> = mutableListOf()
-        val t_radius = radius * 3
-        for (marker in markers) {
-            if (Math.abs(marker.position.latitude - lat) < t_radius && Math.abs(marker.position.longitude - lng) < t_radius) {
-                val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
-                if (dis < radius)
-                    list.add(marker)
+        markers?.let {
+            val t_radius = radius * 3
+            for (marker in it) {
+                if (Math.abs(marker.position.latitude - lat) < t_radius && Math.abs(marker.position.longitude - lng) < t_radius) {
+                    val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
+                    if (dis < radius)
+                        list.add(marker)
+                }
+            }
+            val count = list.count()
+            if (count > 0) {
+                if (count <= 3) {
+                    list.removeAll { Math.abs(it.rotateAngle - angle) > radius_angle }
+                } else {
+                    //同站小区多余3个，返回全部列表
+                }
             }
         }
-        val count = list.count()
-        if (count > 0) {
-            if (count <= 3) {
-                list.removeAll { Math.abs(it.rotateAngle - angle) > radius_angle }
-            } else {
-                //同站小区多余3个，返回全部列表
-            }
-        }
+
         return list
     }
 
+    /**
+     * 获取范围内所有对象
+     */
     fun getMarkers(markers: MutableList<Marker>?, min_lat: Double, min_lng: Double, max_lat: Double, max_lng: Double): MutableList<Marker> {
         //return markers.filter { }
 

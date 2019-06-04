@@ -21,29 +21,33 @@ public class ConnectionLine constructor(latLng: LatLng, isService: Boolean, cell
 //    init {
 //    }
 
-    class SimpleCell(marker: Marker)
-    {
+    class SimpleCell(marker: Marker) {
 
-    val extraData = marker.`object` as ExtraData
-    val cellObject = extraData.elementValue!!
+        val extraData = marker.`object` as ExtraData
+        val cellObject = extraData.elementValue!!
+        var SiteType: String = cellObject["COVER_TYPE"].asString //室内
 
-    var ID: String = cellObject["CELL_ID"].asString //cellObject["CGI_TCI"].asString
+        var NetWork: String = cellObject["NET_NAME"].asString//lte、gsm
 
-    var Lon: Double = marker.position.longitude // cellObject["LON"].asDouble
+        val key = when (NetWork) {
+            "LTE" -> cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
+            else -> cellObject["LAC_TAC"].asString + "_" + cellObject["CELL_ID"].asString //"GSM"
+        }
 
-    var Lat: Double = marker.position.latitude//cellObject["LAT"].asDouble
+        var ID: String = key //cellObject["CGI_TCI"].asString
 
-    var Azimuth: Float = when (cellObject["ANTENNA_ANGLE"].isJsonNull) {
-        true -> 0F
-        false -> cellObject["ANTENNA_ANGLE"].asFloat
+        var Lon: Double = marker.position.longitude // cellObject["LON"].asDouble
+
+        var Lat: Double = marker.position.latitude//cellObject["LAT"].asDouble
+
+        var Azimuth: Float = when (cellObject["ANTENNA_ANGLE"].isJsonNull) {
+            true -> 0F
+            false -> cellObject["ANTENNA_ANGLE"].asFloat
+        }
+
+
+        var Size: Int = extraData.elementSize
     }
-
-    var SiteType: String = cellObject["COVER_TYPE"].asString //室内
-
-    var NetWork: String = cellObject["NET_NAME"].asString//lte、gsm
-
-    var Size: Int = extraData.elementSize
-}
 }
 
 object ConnectionLineObj {
@@ -61,14 +65,25 @@ object ConnectionLineObj {
     }
 
     /**
+     * 清除线对象
+     */
+    private fun clearLines() {
+        if(polylines.any()){
+            for (line: Polyline in polylines) {
+                line.remove()
+            }
+            polylines.clear()
+        }
+    }
+
+    /**
      * 清除线对象和线数据
      */
     fun clearData() {
-        clines.clear()
-        for (line: Polyline in polylines) {
-            line.remove()
+        if(clines.any()){
+            clines.clear()
+            clearLines()
         }
-        polylines.clear()
     }
 
     /**
@@ -78,15 +93,6 @@ object ConnectionLineObj {
         clearLines()
         for (cline in clines) {
             createLine(cline)
-        }
-    }
-
-    /**
-     * 清除线对象
-     */
-    private fun clearLines() {
-        for (line: Polyline in polylines) {
-            line.remove()
         }
     }
 
@@ -132,6 +138,5 @@ object ConnectionLineObj {
             val c_y = c_p.y + dy
             return projection.fromScreenLocation(Point(c_x, c_y))
         }
-
     }
 }

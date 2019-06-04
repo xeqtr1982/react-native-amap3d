@@ -3,7 +3,6 @@ package cn.qiuxiang.react.amap3d.maps
 //import com.amap.api.maps.model.BitmapDescriptor
 import android.content.Context
 import android.graphics.Color
-import android.util.Log
 import android.view.MotionEvent
 import cn.qiuxiang.react.amap3d.dt.*
 import cn.qiuxiang.react.amap3d.toLatLng
@@ -11,8 +10,8 @@ import cn.qiuxiang.react.amap3d.toLatLngBounds
 import cn.qiuxiang.react.amap3d.toWritableMap
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
-import com.amap.api.maps.MapView
 import com.amap.api.maps.Projection
+import com.amap.api.maps.TextureMapView
 import com.amap.api.maps.model.*
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
@@ -27,7 +26,8 @@ import java.util.*
 /**
  * Created by lee on 2019/1/23.
  */
-class AMapSimpleView(context: Context) : MapView(context) {
+class AMapSimpleView(context: Context) : TextureMapView(context) {
+    private val TAG = "ReactNativeJS"
     private val eventEmitter: RCTEventEmitter = (context as ThemedReactContext).getJSModule(RCTEventEmitter::class.java)
     private val locationStyle by lazy {
         val locationStyle = MyLocationStyle()
@@ -148,8 +148,6 @@ class AMapSimpleView(context: Context) : MapView(context) {
             map_markers.put(elementType, mutableListOf())
         when (elementType) {
             MapElementType.mark_GPS.value -> addTestPoint(args) //addtestpoints
-        //MapElementType.mark_Cell.value -> addCells(args) //addcells
-        //MapElementType.mark_Order.value -> addOrders(args) //addorders
         }
     }
 
@@ -168,7 +166,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
         if (elementType == MapElementType.mark_GPS.value) {
             var lines = map_lines[MapElementType.line_TestPoint.value]
             lines?.let {
-                clearLineList(lines)
+                clearLineList(it)
             }
             save_TestPoints.clear()
         }
@@ -222,6 +220,9 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 }
             }
         }
+//        if ((elementType == MapElementType.mark_Cell.value || elementType == MapElementType.mark_GPS.value) && !visible) {
+//            ConnectionLineObj.clearData()
+//        }
     }
 
     fun changeElementsStyle(args: ReadableArray?) {}
@@ -281,7 +282,6 @@ class AMapSimpleView(context: Context) : MapView(context) {
         val size = args?.getInt(2)!!
         clearElementsByType(elementType)
         CellObj.cell_objects.clear()
-        //CellObj.clearEnvelope()
         val markers = map_markers[elementType]
         for (i in 0 until targets.size()) {
             val target = targets.getMap(i)
@@ -313,11 +313,12 @@ class AMapSimpleView(context: Context) : MapView(context) {
         }
     }
 
-    var tempCount: Int = 0
+
     //region testpoint
+
+    var tempCount: Int = 0
     private fun addTestPoint(args: ReadableArray?) {
         //Log.i("android addTestPoint", args.toString())
-        //Log.i("AmapSimpleView", "addTestPoint")
 
         val elementType = args?.getInt(0)!!
         val target = args?.getMap(1)!!
@@ -329,48 +330,53 @@ class AMapSimpleView(context: Context) : MapView(context) {
             testPoint.addProperty(key, value?.toString())
         _addTestPoint(map_markers[elementType]!!, testPoint, size, testStatus)
 
-//        val key = when (testPoint["network"].asString) {
-//            "LTE" -> testPoint["enodebid"].asString + "_" + testPoint["ci"].asString
-//            else -> testPoint["lac"].asString + "_" + testPoint["ci"].asString //"GSM"
-//        }
+//
+//所有参数都有可能为null
+        val key = when (testPoint["Network"].asString) {
+            "LTE" -> {
+                if (testPoint["ECI"].isJsonNull) "null"
+                else testPoint["ECI"].asString
+                //testPoint["eNodeBID"].asString + "_" + testPoint["CellID"].asString
+            }
+            "GSM" ->
+            {
+                if(testPoint["LAC"].isJsonNull || testPoint["CI"].isJsonNull) "null"
+                else "460-00-"+testPoint["LAC"].asString + "-" + testPoint["CI"].asString
+            }
+            else -> "null"
+        }
 
-        tempCount = tempCount + 1
-        Log.i("ReactNativeJS",tempCount.toString())
-        var index = tempCount / 10
-        if (index > 7) index = 7
-        val key = CellObj.keys[index] //Random().nextInt(6)
-        Log.i("ReactNativeJS",key)
-        if (CellObj.cell_objects.containsKey(key)) {
+//        tempCount = tempCount + 1
+//        var index = tempCount / 20
+//        if (index > 5) index %= 6
+//        val key = CellObj.keys[index]
+
+        if (CellObj.cell_objects.containsKey(key) && CellObj.cell_objects[key]!!.isVisible) {
             val lat = testPoint["GCJ_LAT"].asDouble
             val lon = testPoint["GCJ_LON"].asDouble
 
-            if(ConnectionLineObj.clines.size>0){
-                if(ConnectionLineObj.clines[0].simpleCell.ID != key){//切换了主小区，重新创建连线
-                    Log.i("ReactNativeJS","change service cell")
+            if (ConnectionLineObj.clines.size > 0) {
+                if (ConnectionLineObj.clines[0].simpleCell.ID != key) {//切换了主小区，重新创建连线
                     ConnectionLineObj.clearData()
-                    val cl :ConnectionLine = ConnectionLine(LatLng(lat,lon),true,CellObj.cell_objects[key]!!)
-                    ConnectionLineObj.addConnectionLine(map,cl)
-                }
-                else{
+                    val cl = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
+                    ConnectionLineObj.addConnectionLine(map, cl)
+                    ConnectionLineObj.refreshLines()
+                } else {
                     //未切换主小区，不处理，暂不考虑邻区
-                    Log.i("ReactNativeJS","same service cell")
                 }
+            } else {// 第一次连线
+                val cl: ConnectionLine = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
+                ConnectionLineObj.addConnectionLine(map, cl)
+                ConnectionLineObj.refreshLines()
             }
-            else{// 第一次连线
-                Log.i("ReactNativeJS","first service cell line")
-                val cl :ConnectionLine = ConnectionLine(LatLng(lat,lon),true,CellObj.cell_objects[key]!!)
-                ConnectionLineObj.addConnectionLine(map,cl)
-            }
-        }
-        else
-        {
-            Log.i("ReactNativeJS","service cell not found")
+        } else {
+            ConnectionLineObj.clearData()
         }
     }
 
     private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
         when (testStatus) {
-            "START" -> clearMarkerList(markers) //clearTestPoints()
+            "START" -> clearElementsByType(MapElementType.mark_GPS.value) // clearMarkerList(markers) //clearTestPoints()
             "RUNNING" -> {
                 val marker = ParamObj.getMarker(map, testPoint, size,
                         when (markers.any()) {
@@ -393,18 +399,26 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
     private fun _addSingleTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         marker?.let {
+            var move = true
+
             if (markers.count() > 1)
                 _addTestLine(markers)
-            else
+            else {
                 clearMarkerList(markers)
+                if (markers.count() > 0 && markers.last().position == marker.position) move = false
+            }
+
             markers.add(it)
-            if (following)
+            if (following && move)
                 moveTo(it.position)
         }
     }
 
     private fun _addMultiTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         if (marker != null) {
+            var move = true
+            if (markers.count() > 0 && markers.last().position == marker.position) move = false
+
             markers.add(marker)
             if (markers.count() > maxTestPointCount) {
                 val testPoints = markers.subList(0, maxlinePointsCount)
@@ -413,7 +427,7 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 markers.clear()
                 markers.addAll(temp)
             }
-            if (following)
+            if (following && move)
                 moveTo(marker.position)
         }
 
@@ -546,19 +560,12 @@ class AMapSimpleView(context: Context) : MapView(context) {
 
         map.setOnMapClickListener { latLng ->
             if (measuring) {
-                Log.i("ReactNativeJS", "setOnMapClickListener")
                 MeasureObj.addMeasurePoint(map, latLng)
             } else {
-                //            for (markers in map_markers.values) {
-                //                for (marker in markers) {
-                //                    marker.hideInfoWindow()
-                //                }
-                //            }
-
+                //for (markers in map_markers.values)
                 for (marker: Marker in map_markers[MapElementType.mark_GPS.value]!!) {
                     marker.hideInfoWindow()
                 }
-
                 removeSelectMarker()
                 emit(id, "onPress", latLng.toWritableMap())
             }
@@ -589,9 +596,8 @@ class AMapSimpleView(context: Context) : MapView(context) {
                 //Log.i("ReactNativeJS", "setOnMarkerClickListener")
                 val data = (marker.`object` as ExtraData)
                 selectMarkerList = when (data.elementType) {
-                //MapElementType.mark_GPS.value-> _paramMarkers
-                    MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value]!!, marker.position.latitude, marker.position.longitude, marker.rotateAngle)
-                    MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value]!!, marker.position.latitude, marker.position.longitude)
+                    MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value], marker.position.latitude, marker.position.longitude, marker.rotateAngle)
+                    MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value], marker.position.latitude, marker.position.longitude)
                     else -> mutableListOf()
                 }
                 var array = Arguments.createArray()

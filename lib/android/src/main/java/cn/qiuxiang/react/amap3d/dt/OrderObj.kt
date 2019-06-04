@@ -52,12 +52,14 @@ object OrderObj {
      *  @param lng
      *  @param radius 容差半径
      */
-    fun getMarkers(markers: MutableList<Marker>, lat: Double, lng: Double, radius: Double = 0.0001): MutableList<Marker> {
+    fun getMarkers(markers: MutableList<Marker>?, lat: Double, lng: Double, radius: Double = 0.0001): MutableList<Marker> {
         val list: MutableList<Marker> = mutableListOf()
-        for (marker in markers) {
-            val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
-            if (dis <= radius)
-                list.add(marker)
+        markers?.let {
+            for (marker in it) {
+                val dis = GeoUtils.distance(lat, lng, marker.position.latitude, marker.position.longitude)
+                if (dis <= radius)
+                    list.add(marker)
+            }
         }
         return list
     }
