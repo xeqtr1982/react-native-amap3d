@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.util.Log
 import cn.qiuxiang.react.amap3d.maps.ExtraData
 import com.amap.api.maps.AMap
 import com.amap.api.maps.model.*
@@ -26,7 +25,7 @@ object ParamObj {
             val lon = testPoint["GCJ_LON"].asDouble
             val value = testPoint[testPoint["KeyField"].asString]
             if (isSameWithLast(last, lat, lon, value)) return null
-            Log.i("ReactNativeJS","native add new marker")
+            //Log.i("ReactNativeJS","native add new marker")
             val bitmapDescriptor = getBitmapDescriptorByValue(testPoint, size)
             val title = testPoint["KeyField"].asString + "：" + when (value.isJsonNull) {
                 true -> ""

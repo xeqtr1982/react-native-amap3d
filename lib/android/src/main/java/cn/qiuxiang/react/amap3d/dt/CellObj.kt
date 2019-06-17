@@ -29,6 +29,9 @@ object CellObj {
     fun getMarker(map: AMap, cellObject: JsonObject?, size: Int): Marker? {
         if (cellObject == null)
             return null
+        if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull)
+        //|| cellObject["LAT"].isJsonNull || cellObject["LON"].isJsonNull)
+            return null
         val siteType = cellObject["COVER_TYPE"].asString
         val netWork = cellObject["NET_NAME"].asString
 
@@ -72,7 +75,7 @@ object CellObj {
 
 
         val key = when (netWork) {
-            "LTE" ->cellObject["CELL_ID"].asString // cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
+            "LTE" -> cellObject["CELL_ID"].asString // cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
             else -> cellObject["CGI_TCI"].asString  //"GSM"
         }
         cell_objects.put(key, marker)
