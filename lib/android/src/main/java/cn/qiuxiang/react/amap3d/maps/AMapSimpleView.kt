@@ -101,7 +101,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                             }
                             selectMarker = marker
                             selectMarker?.setIcon(bitmapDescriptor)
-                            selectMarker?.showInfoWindow()
+                            //selectMarker?.showInfoWindow()
                             break
                         }
                     }

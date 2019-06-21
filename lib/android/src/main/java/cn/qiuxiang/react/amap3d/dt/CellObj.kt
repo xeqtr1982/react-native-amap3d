@@ -64,7 +64,7 @@ object CellObj {
                 .draggable(false)
                 .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
                 .anchor(0.5f, auchorY)
-                .infoWindowEnable(true)
+                .infoWindowEnable(false)
                 .title(cellObject["CELL_NAME"].asString)
                 .rotateAngle(rotateAngle)
                 //.zIndex(0f)
