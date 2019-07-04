@@ -79,6 +79,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
                 "onStatusChangeComplete", MapBuilder.of("registrationName", "onStatusChangeComplete"),
                 "onLocation", MapBuilder.of("registrationName", "onLocation")
         )
+        eventMap.put("onKeywordSearched", MapBuilder.of("registrationName", "onKeywordSearched"))//返回关键字查询结果id列表
         eventMap.put("onMapRectSelected", MapBuilder.of("registrationName", "onMapRectSelected"))//返回框选范围
         eventMap.put("onFollowStateChanged", MapBuilder.of("registrationName", "onFollowStateChanged"))//跟随状态发生改变
         eventMap.put("onMapTiltChanged", MapBuilder.of("registrationName", "onMapTiltChanged"))

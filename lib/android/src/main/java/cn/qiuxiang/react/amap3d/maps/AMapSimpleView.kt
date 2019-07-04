@@ -51,7 +51,8 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
 
     private var _touchCount: Int = 0 //是否手动拖动地图的判断值
-    var following: Boolean = false//是否跟随当前测试点
+    var following: Boolean = false
+        //是否跟随当前测试点
         set(value) {
             field = value
             val event = Arguments.createMap()
@@ -280,9 +281,11 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         val elementType = args?.getInt(0)!!
         val targets = args?.getArray(1)!!
         val size = args?.getInt(2)!!
+        val selected = args?.getBoolean(4)!!
         clearElementsByType(elementType)
         CellObj.cell_objects.clear()
         val markers = map_markers[elementType]
+
         for (i in 0 until targets.size()) {
             val target = targets.getMap(i)
             val cellObject = JsonObject()
@@ -294,8 +297,21 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 markers?.add(it)//marker)
             }
         }
-        //map.runOnDrawFrame()//refresh map
-
+        if (selected) {
+            markers?.let {
+                selectMarkerList = it
+                var array = Arguments.createArray()
+                if (selectMarkerList.count() > 0) {
+                    for (marker in selectMarkerList!!) {
+                        array.pushString((marker.`object` as ExtraData).elementKey)
+                    }
+                }
+                val data: WritableMap = Arguments.createMap()
+                data.putInt("elementType", elementType)
+                data.putArray("ids", array)
+                emit(id, "onKeywordSearched", data)
+            }
+        }
     }
 
     private fun addTestPoints(args: ReadableArray?) {
@@ -338,10 +354,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 else testPoint["ECI"].asString
                 //testPoint["eNodeBID"].asString + "_" + testPoint["CellID"].asString
             }
-            "GSM" ->
-            {
-                if(testPoint["LAC"].isJsonNull || testPoint["CI"].isJsonNull) "null"
-                else "460-00-"+testPoint["LAC"].asString + "-" + testPoint["CI"].asString
+            "GSM" -> {
+                if (testPoint["LAC"].isJsonNull || testPoint["CI"].isJsonNull) "null"
+                else "460-00-" + testPoint["LAC"].asString + "-" + testPoint["CI"].asString
             }
             else -> "null"
         }
@@ -518,6 +533,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 //        emit(id, "onMapRectSelected", latLng.toWritableMap())
     }
 
+    /**
+     * 框选
+     */
     fun fromScreenRect(args: ReadableArray?) {
         val elementType: Int = args?.getInt(0)!!
         val rect = args?.getMap(1)!!
@@ -532,13 +550,14 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 //        val wgs_leftbottom = BetrayLatLng.gcj_decrypt(leftbottom.latitude, leftbottom.longitude)
 //        val wgs_righttop = BetrayLatLng.gcj_decrypt(righttop.latitude, righttop.longitude)
 //        Log.i("ReactNativeJS","wgs_rect "+wgs_leftbottom[0].toString()+","+wgs_leftbottom[1].toString()+","+wgs_righttop[0].toString()+","+wgs_righttop[1].toString())
-        val markers = when (elementType) {
+        selectMarkerList = when (elementType) {
             MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[elementType], leftbottom.latitude, leftbottom.longitude, righttop.latitude, righttop.longitude)
             else -> mutableListOf()
         }
+
         var array = Arguments.createArray()
-        if (markers.any()) {
-            for (marker in markers) {
+        if (selectMarkerList.any()) {
+            for (marker in selectMarkerList) {
                 array.pushString((marker.`object` as ExtraData).elementKey)
             }
         }
