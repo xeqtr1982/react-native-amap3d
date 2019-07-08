@@ -41,7 +41,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
     private var save_TestPoints: MutableList<TestPoint> = mutableListOf()
 
     private var selectMarker: Marker? = null //选中标记
-    private var selectMarkerList: MutableList<Marker> = mutableListOf()
+    private var selectMarkerList = HashMap<String, Marker>()         // MutableList<Marker> = mutableListOf()
 
     private var serviceCellMarker: Marker? = null//主服务小区
 
@@ -90,22 +90,36 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 //                var elements = map_markers[elementType]!!
 //                selectMarkerList?.let {
                 if (selectMarkerList.any()) {
-                    for (marker in selectMarkerList) {
+                    if (selectMarkerList.containsKey(id)) {
+                        val marker = selectMarkerList[id]!!
                         val extData = (marker.`object` as ExtraData)!!
-                        if (extData.elementKey == id) {
-                            val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
-                                MapElementType.mark_Cell.value -> {
-                                    val cellObject = extData.elementValue!!
-                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
-                                }
-                                else -> null
+                        val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
+                            MapElementType.mark_Cell.value -> {
+                                val cellObject = extData.elementValue!!
+                                CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
                             }
-                            selectMarker = marker
-                            selectMarker?.setIcon(bitmapDescriptor)
-                            //selectMarker?.showInfoWindow()
-                            break
+                            else -> null
                         }
+                        selectMarker = marker
+                        selectMarker?.setIcon(bitmapDescriptor)
                     }
+
+//                    for (marker in selectMarkerList) {
+//                        val extData = (marker.`object` as ExtraData)!!
+//                        if (extData.elementKey == id) {
+//                            val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
+//                                MapElementType.mark_Cell.value -> {
+//                                    val cellObject = extData.elementValue!!
+//                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+//                                }
+//                                else -> null
+//                            }
+//                            selectMarker = marker
+//                            selectMarker?.setIcon(bitmapDescriptor)
+//                            //selectMarker?.showInfoWindow()
+//                            break
+//                        }
+//                    }
                 }
             }
             //}
@@ -298,14 +312,17 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             }
         }
         if (selected) {
+            selectMarkerList.clear()
+            if (following) following = false//取消自动跟随
             markers?.let {
-                selectMarkerList = it
                 var array = Arguments.createArray()
-                if (selectMarkerList.count() > 0) {
-                    for (marker in selectMarkerList!!) {
-                        array.pushString((marker.`object` as ExtraData).elementKey)
-                    }
+                //if (selectMarkerList.count() > 0)
+                for (marker in it) {
+                    val key = (marker.`object` as ExtraData).elementKey
+                    selectMarkerList.put(key, marker)
+                    array.pushString(key)
                 }
+
                 val data: WritableMap = Arguments.createMap()
                 data.putInt("elementType", elementType)
                 data.putArray("ids", array)
@@ -550,15 +567,17 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 //        val wgs_leftbottom = BetrayLatLng.gcj_decrypt(leftbottom.latitude, leftbottom.longitude)
 //        val wgs_righttop = BetrayLatLng.gcj_decrypt(righttop.latitude, righttop.longitude)
 //        Log.i("ReactNativeJS","wgs_rect "+wgs_leftbottom[0].toString()+","+wgs_leftbottom[1].toString()+","+wgs_righttop[0].toString()+","+wgs_righttop[1].toString())
-        selectMarkerList = when (elementType) {
+        val list = when (elementType) {
             MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[elementType], leftbottom.latitude, leftbottom.longitude, righttop.latitude, righttop.longitude)
             else -> mutableListOf()
         }
-
+        selectMarkerList.clear()
         var array = Arguments.createArray()
-        if (selectMarkerList.any()) {
-            for (marker in selectMarkerList) {
-                array.pushString((marker.`object` as ExtraData).elementKey)
+        if (list.any()) {
+            for (marker in list) {
+                val key = (marker.`object` as ExtraData).elementKey
+                selectMarkerList.put(key, marker)
+                array.pushString(key)
             }
         }
 
@@ -614,15 +633,19 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 marker.showInfoWindow()
                 //Log.i("ReactNativeJS", "setOnMarkerClickListener")
                 val data = (marker.`object` as ExtraData)
-                selectMarkerList = when (data.elementType) {
+                val list = when (data.elementType) {
                     MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value], marker.position.latitude, marker.position.longitude, marker.rotateAngle)
                     MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value], marker.position.latitude, marker.position.longitude)
                     else -> mutableListOf()
                 }
+                selectMarkerList.clear()
+
                 var array = Arguments.createArray()
-                if (selectMarkerList.count() > 0) {
-                    for (marker in selectMarkerList!!) {
-                        array.pushString((marker.`object` as ExtraData).elementKey)
+                if (list.count() > 0) {
+                    for (marker in list!!) {
+                        val key = (marker.`object` as ExtraData).elementKey
+                        selectMarkerList[key] = marker
+                        array.pushString(key)
                     }
                 }
                 var map = data.toWritableMap()
