@@ -42,7 +42,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
     private var selectMarker: Marker? = null //选中标记
     private var selectMarkerList = HashMap<String, Marker>()         // MutableList<Marker> = mutableListOf()
-
+    private var isKeywordType: Boolean = false
     private var serviceCellMarker: Marker? = null//主服务小区
 
     private val maxTestPointCount = 100 //最多绘制测试点数
@@ -311,6 +311,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 markers?.add(it)//marker)
             }
         }
+        isKeywordType = selected
         if (selected) {
             selectMarkerList.clear()
             if (following) following = false//取消自动跟随
@@ -633,21 +634,24 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 marker.showInfoWindow()
                 //Log.i("ReactNativeJS", "setOnMarkerClickListener")
                 val data = (marker.`object` as ExtraData)
+
                 val list = when (data.elementType) {
                     MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[MapElementType.mark_Cell.value], marker.position.latitude, marker.position.longitude, marker.rotateAngle)
                     MapElementType.mark_Order.value -> OrderObj.getMarkers(map_markers[MapElementType.mark_Order.value], marker.position.latitude, marker.position.longitude)
                     else -> mutableListOf()
                 }
-                selectMarkerList.clear()
-
                 var array = Arguments.createArray()
-                if (list.count() > 0) {
-                    for (marker in list!!) {
-                        val key = (marker.`object` as ExtraData).elementKey
-                        selectMarkerList[key] = marker
-                        array.pushString(key)
+                if (!isKeywordType || data.elementType == MapElementType.mark_Order.value) {
+                    selectMarkerList.clear()
+                    if (list.count() > 0) {
+                        for (m in list!!) {
+                            val key = (m.`object` as ExtraData).elementKey
+                            selectMarkerList[key] = m
+                            array.pushString(key)
+                        }
                     }
                 }
+
                 var map = data.toWritableMap()
                 map.putArray("ids", array)
                 emit(id, "onMarkerPress", map)
