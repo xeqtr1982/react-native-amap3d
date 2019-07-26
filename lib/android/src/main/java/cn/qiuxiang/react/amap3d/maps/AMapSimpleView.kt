@@ -216,6 +216,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         val visible: Boolean = args?.getBoolean(1)!!
         if (map_markers.containsKey(elementType)) {
             var elements = map_markers[elementType]!!
+            //if (elements.first().isVisible != visible)
             elements?.let {
                 if (elements.any()) {
                     for (marker in elements) {
@@ -223,7 +224,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                     }
                 }
             }
-
         }
         if (elementType == MapElementType.mark_GPS.value) {
             var lines = map_lines[MapElementType.line_TestPoint.value]
@@ -296,6 +296,8 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         val targets = args?.getArray(1)!!
         val size = args?.getInt(2)!!
         val selected = args?.getBoolean(4)!!
+        val visible = args?.getBoolean(5)!!
+
         clearElementsByType(elementType)
         CellObj.cell_objects.clear()
         val markers = map_markers[elementType]
@@ -306,7 +308,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
                 cellObject.addProperty(key, value?.toString())
             }
-            val marker = CellObj.getMarker(map, cellObject, size) //getCellMarker(cellObject, size)
+            val marker = CellObj.getMarker(map, cellObject, size, visible) //getCellMarker(cellObject, size)
             marker?.let {
                 markers?.add(it)//marker)
             }
@@ -378,12 +380,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             }
             else -> "null"
         }
-
-//        tempCount = tempCount + 1
-//        var index = tempCount / 20
-//        if (index > 5) index %= 6
-//        val key = CellObj.keys[index]
-
+        //小区连线部分
         if (CellObj.cell_objects.containsKey(key) && CellObj.cell_objects[key]!!.isVisible) {
             val lat = testPoint["GCJ_LAT"].asDouble
             val lon = testPoint["GCJ_LON"].asDouble

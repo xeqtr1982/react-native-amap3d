@@ -26,7 +26,7 @@ object CellObj {
      * @param cellObject
      * @param size LTE宏站尺寸，GSM=LTE*0.7,INNER=LTE*0.5
      */
-    fun getMarker(map: AMap, cellObject: JsonObject?, size: Int): Marker? {
+    fun getMarker(map: AMap, cellObject: JsonObject?, size: Int,visible:Boolean): Marker? {
         if (cellObject == null)
             return null
         if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull)
@@ -67,6 +67,7 @@ object CellObj {
                 .infoWindowEnable(false)
                 .title(cellObject["CELL_NAME"].asString)
                 .rotateAngle(rotateAngle)
+                .visible(visible)
                 //.zIndex(0f)
         )
 
