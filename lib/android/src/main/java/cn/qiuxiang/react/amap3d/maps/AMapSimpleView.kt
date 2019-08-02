@@ -599,9 +599,14 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 MeasureObj.addMeasurePoint(map, latLng)
             } else {
                 //for (markers in map_markers.values)
-                for (marker: Marker in map_markers[MapElementType.mark_GPS.value]!!) {
-                    marker.hideInfoWindow()
+                if(map_markers.containsKey(MapElementType.mark_GPS.value)){
+                    map_markers[MapElementType.mark_GPS.value]?.let {
+                        for (marker: Marker in it) {
+                            marker.hideInfoWindow()
+                        }
+                    }
                 }
+
                 removeSelectMarker()
                 emit(id, "onPress", latLng.toWritableMap())
             }
