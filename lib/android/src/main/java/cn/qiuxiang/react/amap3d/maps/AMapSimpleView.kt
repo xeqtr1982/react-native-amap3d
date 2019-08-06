@@ -96,7 +96,11 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                         val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
                             MapElementType.mark_Cell.value -> {
                                 val cellObject = extData.elementValue!!
-                                CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+//                                if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull)
+//                                    null
+//                                else
+                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+
                             }
                             else -> null
                         }
@@ -137,7 +141,11 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             val cellObject = extData.elementValue!!
             val bitmapDescriptor =
                     when (extData.elementType) {
-                        MapElementType.mark_Cell.value -> CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+                        MapElementType.mark_Cell.value ->
+//                            if (cellObject["COVER_TYPE"].isJsonNull )
+//                                null
+//                            else
+                                CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
                         else -> null
                     }
 
@@ -599,7 +607,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 MeasureObj.addMeasurePoint(map, latLng)
             } else {
                 //for (markers in map_markers.values)
-                if(map_markers.containsKey(MapElementType.mark_GPS.value)){
+                if (map_markers.containsKey(MapElementType.mark_GPS.value)) {
                     map_markers[MapElementType.mark_GPS.value]?.let {
                         for (marker: Marker in it) {
                             marker.hideInfoWindow()
@@ -643,7 +651,8 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                     else -> mutableListOf()
                 }
                 var array = Arguments.createArray()
-                if (!isKeywordType || data.elementType == MapElementType.mark_Order.value) {
+                if (!isKeywordType )//|| data.elementType == MapElementType.mark_Order.value)
+                {
                     selectMarkerList.clear()
                     if (list.count() > 0) {
                         for (m in list!!) {
