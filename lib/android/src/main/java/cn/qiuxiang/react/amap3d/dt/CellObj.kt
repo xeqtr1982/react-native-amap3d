@@ -29,8 +29,10 @@ object CellObj {
     fun getMarker(map: AMap, cellObject: JsonObject?, size: Int,visible:Boolean): Marker? {
         if (cellObject == null)
             return null
-        if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull)
-        //|| cellObject["LAT"].isJsonNull || cellObject["LON"].isJsonNull)
+        if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull ||
+                cellObject["LON"].isJsonNull || cellObject["LAT"].isJsonNull ||
+                cellObject["CGI_TCI"].isJsonNull || cellObject["CELL_NAME"].isJsonNull ||
+                cellObject["LAC_TAC"].isJsonNull || cellObject["SITE_ID"].isJsonNull || cellObject["CELL_ID"].isJsonNull)
             return null
         val siteType = cellObject["COVER_TYPE"].asString
         val netWork = cellObject["NET_NAME"].asString
