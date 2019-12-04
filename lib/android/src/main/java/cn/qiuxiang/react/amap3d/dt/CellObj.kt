@@ -11,6 +11,7 @@ import com.google.gson.JsonObject
  */
 object CellObj {
     private val renderMaps = HashMap<String, BitmapDescriptor>()
+    private val fixedMaps = HashMap<String, BitmapDescriptor>()
     var cell_objects = HashMap<String, Marker>()
 
     //val keys: Array<String> = arrayOf("141_23820061", "129_23866395", "142_23820062", "130_23866396", "129_23866395", "131_23866397")
@@ -26,7 +27,7 @@ object CellObj {
      * @param cellObject
      * @param size LTE宏站尺寸，GSM=LTE*0.7,INNER=LTE*0.5
      */
-    fun getMarker(map: AMap, cellObject: JsonObject?, size: Int,visible:Boolean): Marker? {
+    fun getMarker(map: AMap, cellObject: JsonObject?, size: Int, visible: Boolean): Marker? {
         if (cellObject == null)
             return null
         if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull ||
@@ -250,6 +251,123 @@ object CellObj {
         return renderMaps[key]
     }
 
+
+    fun getFixedMarker(map: AMap, cellObject: JsonObject?, size: Int): Marker? {
+        if (cellObject == null)
+            return null
+        if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull ||
+                cellObject["LON"].isJsonNull || cellObject["LAT"].isJsonNull ||
+                cellObject["CGI_TCI"].isJsonNull || cellObject["CELL_NAME"].isJsonNull ||
+                cellObject["LAC_TAC"].isJsonNull || cellObject["SITE_ID"].isJsonNull ||
+                cellObject["CELL_ID"].isJsonNull || cellObject["KeyColor"].isJsonNull)
+            return null
+        val siteType = cellObject["COVER_TYPE"].asString
+        val netWork = cellObject["NET_NAME"].asString
+
+        if (siteType.isNullOrEmpty())
+            return null
+        val auchorY = when (siteType == "室内") {
+            true -> 0.5f
+            false -> 1.0f
+        }
+        val azimuth = when (cellObject["ANTENNA_ANGLE"].isJsonNull) {
+            true -> 0F
+            false -> cellObject["ANTENNA_ANGLE"].asFloat
+        }
+        val rotateAngle: Float = when (siteType == "室内") {
+            true -> 0.0f
+            false -> 360 - azimuth
+        }
+        //Log.i("ReactNativeJS", "cellcolor:" + cellObject["KeyColor"].asString)
+        val color = Color.parseColor(cellObject["KeyColor"].asString)
+        val bitmapDescriptor = getFixedBitmapDescriptor(siteType, netWork, size, color, ObjRender.CELL_COLOR.strokeColor)
+
+        val wgslat = cellObject["LAT"].asDouble
+        val wgslon = cellObject["LON"].asDouble
+
+        val gcj_latlon = BetrayLatLng.gcj_encrypt(wgslat, wgslon)
+
+        val marker = map.addMarker(MarkerOptions()
+                .setFlat(true)
+                .icon(bitmapDescriptor)
+                .alpha(1f)
+                .draggable(false)
+                .position(LatLng(gcj_latlon[0], gcj_latlon[1]))
+                .anchor(0.5f, auchorY)
+                .infoWindowEnable(false)
+                .title(cellObject["CELL_NAME"].asString)
+                .rotateAngle(rotateAngle)
+                //.visible(visible)
+                .zIndex(9f)
+        )
+
+        val data = ExtraData(cellObject["CGI_TCI"].asString, MapElementType.mark_Cell.value, size, cellObject)
+        marker?.`object` = data
+
+
+        val key = when (netWork) {
+            "LTE" -> cellObject["CELL_ID"].asString // cellObject["SITE_ID"].asString + "_" + cellObject["CELL_ID"].asString
+            else -> cellObject["CGI_TCI"].asString  //"GSM"
+        }
+        return marker
+    }
+
+    fun getFixedBitmapDescriptor(siteType: String, netWork: String, size: Int, color: Int, strokeColor: Int): BitmapDescriptor? {
+        val key = netWork + "_" + siteType + "_" + color.toString()+"_"+strokeColor.toString()
+
+        if (!fixedMaps.containsKey(key)) {
+
+            val cellPath = when (siteType == "室内") {
+                true -> ObjRender.CELL_GSM_INNER_PATH
+                false -> ObjRender.CELL_OUT_PATH_30
+            }
+            var drawSize = size
+            var scale=1.0f
+            if(strokeColor==Color.RED){
+                drawSize = (size * 1.5).toInt()
+                scale = drawSize * 1.0f / cellPath.height
+                if (siteType == "室内") {
+                    scale = scale * 0.7f
+                    drawSize = (drawSize * 0.7).toInt()
+                }
+            }else{
+                scale = size * 1.0f / cellPath.height
+                if (siteType == "室内") {
+                    scale = scale * 0.5f
+                    drawSize = size / 2
+                } else if (netWork == "LTE") {
+                    scale = scale * 0.75f
+                    drawSize = 3 * size / 4
+                }
+            }
+
+            val paint = Paint()
+            paint.color = color
+            paint.alpha = 255
+
+            val paintStroke = Paint()
+            paintStroke.style = Paint.Style.STROKE
+            paintStroke.color = strokeColor
+            paintStroke.strokeWidth = 2f
+            //paintStroke.setPathEffect()
+
+            val path1 = PathParser().createPathFromPathData(cellPath.pathData)
+            val path = Path()
+            val matrix = Matrix()
+            matrix.postScale(scale, scale)
+            path.addPath(path1, matrix)
+
+            val bitmap = Bitmap.createBitmap(
+                    drawSize, drawSize, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawPath(path, paint)//填充图形
+            canvas.drawPath(path, paintStroke)//外边框
+            val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
+            if (bitmapDescriptor != null)
+                fixedMaps[key] = bitmapDescriptor
+        }
+        return fixedMaps[key]
+    }
 
     /**
      * 获取相近位置的所有对象

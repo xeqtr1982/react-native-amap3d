@@ -133,7 +133,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
     }
 
-    private fun removeSelectMarker() {
+    fun removeSelectMarker() {
         selectMarker?.let {
             if (it.isInfoWindowShown)
                 it.hideInfoWindow()

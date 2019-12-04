@@ -30,6 +30,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
         val CHANGE_ELEMENTS_VISIBLE = 24
         val CHANGE_ELEMENTS_STYLE = 25
         val SELECT_ELEMENT = 26
+        val REMOVE_SELECTION=27
 
         val FROM_SCREEN_XY = 51
         val FROM_SCREEN_RECT = 52
@@ -46,7 +47,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
     override fun getCommandsMap(): Map<String, Int> {
         return mapOf("animateTo" to ANIMATE_TO, "maptypeTo" to MAPTYPE_TO, "changeUI" to CHANGEUI_TO,
                 "changeFollow" to CHANGE_FOLLOW, "changeMeasure" to CHANGE_MEASURE, "changeRenderField" to CHANGE_RENDER_FIELD,
-                "addElements" to ADD_ELEMENTS, "addElement" to ADD_ELEMENT, "removeElements" to REMOVE_ELEMENTS,
+                "addElements" to ADD_ELEMENTS, "addElement" to ADD_ELEMENT, "removeElements" to REMOVE_ELEMENTS,"removeSelection" to REMOVE_SELECTION,
                 "changeElementsVisible" to CHANGE_ELEMENTS_VISIBLE, "changeElementsStyle" to CHANGE_ELEMENTS_STYLE,
                 "fromScreenXY" to FROM_SCREEN_XY, "fromScreenRect" to FROM_SCREEN_RECT, "selectElement" to SELECT_ELEMENT
         )
@@ -62,6 +63,7 @@ internal class AMapSimpleViewManager : ViewGroupManager<AMapSimpleView>() {
             ADD_ELEMENTS -> root?.addElements(args)
             ADD_ELEMENT -> root?.addElement(args)
             REMOVE_ELEMENTS -> root?.removeElements(args)
+            REMOVE_SELECTION->root?.removeSelectMarker()
             CHANGE_ELEMENTS_VISIBLE -> root?.changeElementsVisible(args)
             CHANGE_ELEMENTS_STYLE -> root?.changeElementsStyle(args)
             SELECT_ELEMENT -> root?.selectElement(args)

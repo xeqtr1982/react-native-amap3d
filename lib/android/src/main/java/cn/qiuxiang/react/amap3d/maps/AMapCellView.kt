@@ -1,20 +1,24 @@
 package cn.qiuxiang.react.amap3d.maps
 
 import android.content.Context
+import android.graphics.Color
 import cn.qiuxiang.react.amap3d.dt.CellObj
-import cn.qiuxiang.react.amap3d.dt.MapElementType
+import cn.qiuxiang.react.amap3d.dt.ObjRender
 import cn.qiuxiang.react.amap3d.toLatLng
 import cn.qiuxiang.react.amap3d.toWritableMap
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.TextureMapView
-import com.amap.api.maps.model.*
+import com.amap.api.maps.model.CameraPosition
+import com.amap.api.maps.model.LatLng
+import com.amap.api.maps.model.Marker
+import com.amap.api.maps.model.MyLocationStyle
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
-import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 
 class AMapCellView(context: Context) : TextureMapView(context) {
 
@@ -36,22 +40,45 @@ class AMapCellView(context: Context) : TextureMapView(context) {
     fun addCells(args: ReadableArray?) {
         val fixed: Boolean = args?.getBoolean(0)!!
         val targets = args?.getArray(1)!!
-        val size: Int = args?.getInt(3)!!
+        val size: Int = args?.getInt(2)!!
         if (fixed) {
-            val ranges: JsonArray = args?.getArray(2)!! as JsonArray
-            addFixedCells(targets, ranges, size)
+            //val ranges: JsonArray = args?.getArray(2)!! as JsonArray
+            addFixedCells(targets, size)
         } else {
-            val visible = args?.getBoolean(4)!!
-            addNormalCells(targets,size,visible)
+            val visible = args?.getBoolean(3)!!
+            addNormalCells(targets, size, visible)
         }
     }
 
-    private fun addFixedCells(targets: ReadableArray, ranges: JsonArray, size: Int) {
+    private fun addFixedCells(targets: ReadableArray, size: Int) {
         clearMarkerList(fixedCells)
+
+        for (i in 0 until targets.size()) {
+            val target = targets.getMap(i)
+            val cellObject = JsonObject()
+            for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
+                cellObject.addProperty(key, value?.toString())
+            }
+            val marker = CellObj.getFixedMarker(map, cellObject, size)
+            marker?.let {
+                fixedCells?.add(it)
+            }
+        }
     }
 
     private fun addNormalCells(targets: ReadableArray, size: Int, visible: Boolean) {
         clearMarkerList(normalCells)
+        for (i in 0 until targets.size()) {
+            val target = targets.getMap(i)
+            val cellObject = JsonObject()
+            for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
+                cellObject.addProperty(key, value?.toString())
+            }
+            val marker = CellObj.getMarker(map, cellObject, size, visible)
+            marker?.let {
+                normalCells?.add(it)//marker)
+            }
+        }
     }
 
     fun addCell(args: ReadableArray?) {
@@ -93,26 +120,24 @@ class AMapCellView(context: Context) : TextureMapView(context) {
     fun selectCell(args: ReadableArray?) {
         if (selectMarker != null)
             removeSelectMarker()
-        val isFixedCells = args?.getBoolean(0)!!
-        val id: String? = args?.getString(1)
+        val id: String? = args?.getString(0)
         if (!id.isNullOrEmpty()) {
-            //val marker = selectMarkerList[id]!!
-            val extData = (selectMarker?.`object` as ExtraData)!!
-
-            val bitmapDescriptor: BitmapDescriptor? = when (isFixedCells) {
-                true -> {
-                    val cellObject = extData.elementValue!!
-                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
-
+            if (fixedCells.any()) {
+                for (i in 0 until fixedCells.size) {
+                    val marker = fixedCells[i]
+                    val extData = (marker?.`object` as ExtraData)!!
+                    if (extData.elementKey == id) {
+                        val cellObject = extData.elementValue!!
+                        val color = Color.parseColor(cellObject["KeyColor"].asString)
+                        val bitmapDescriptor = CellObj.getFixedBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString,
+                                extData.elementSize,color,Color.RED)
+                        selectMarker = marker
+                        selectMarker?.setIcon(bitmapDescriptor)
+                        break
+                    }
                 }
-                else -> null
             }
-            //selectMarker = marker
-            selectMarker?.setIcon(bitmapDescriptor)
-        } else {
-            //removeSelectMarker()
         }
-
     }
 
     private fun removeSelectMarker() {
@@ -121,13 +146,9 @@ class AMapCellView(context: Context) : TextureMapView(context) {
                 it.hideInfoWindow()
             val extData = (it.`object` as ExtraData)!!
             val cellObject = extData.elementValue!!
-            val bitmapDescriptor =
-                    when (extData.elementType) {
-                        MapElementType.mark_Cell.value ->
-                            CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
-                        else -> null
-                    }
-
+            val color = Color.parseColor(cellObject["KeyColor"].asString)
+            val bitmapDescriptor =CellObj.getFixedBitmapDescriptor(cellObject["COVER_TYPE"].asString,
+                    cellObject["NET_NAME"].asString, extData.elementSize, color, ObjRender.CELL_COLOR.strokeColor)
             it.setIcon(bitmapDescriptor)
             selectMarker = null
         }
