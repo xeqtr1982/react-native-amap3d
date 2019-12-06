@@ -243,9 +243,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 }
             }
         }
-//        if ((elementType == MapElementType.mark_Cell.value || elementType == MapElementType.mark_GPS.value) && !visible) {
-//            ConnectionLineObj.clearData()
-//        }
+        if ((elementType == MapElementType.mark_Cell.value || elementType == MapElementType.mark_GPS.value) && !visible) {
+            ConnectionLineObj.clearData()
+        }
     }
 
     fun changeElementsStyle(args: ReadableArray?) {}
@@ -267,7 +267,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             for ((key, value) in target.toHashMap()) {//as HashMap<String, Any>
                 orderObject.addProperty(key, value?.toString())
             }
-
 
             val marker = OrderObj.getMarker(map, orderObject, size) //getCellMarker(cellObject, size)
             marker?.let {
@@ -388,28 +387,28 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             }
             else -> "null"
         }
-//        //小区连线部分
-//        if (CellObj.cell_objects.containsKey(key) && CellObj.cell_objects[key]!!.isVisible) {
-//            val lat = testPoint["GCJ_LAT"].asDouble
-//            val lon = testPoint["GCJ_LON"].asDouble
-//
-//            if (ConnectionLineObj.clines.size > 0) {
-//                if (ConnectionLineObj.clines[0].simpleCell.ID != key) {//切换了主小区，重新创建连线
-//                    ConnectionLineObj.clearData()
-//                    val cl = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
-//                    ConnectionLineObj.addConnectionLine(map, cl)
-//                    ConnectionLineObj.refreshLines()
-//                } else {
-//                    //未切换主小区，不处理，暂不考虑邻区
-//                }
-//            } else {// 第一次连线
-//                val cl: ConnectionLine = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
-//                ConnectionLineObj.addConnectionLine(map, cl)
-//                ConnectionLineObj.refreshLines()
-//            }
-//        } else {
-//            ConnectionLineObj.clearData()
-//        }
+        //小区连线部分
+        if (CellObj.cell_objects.containsKey(key) && CellObj.cell_objects[key]!!.isVisible) {
+            val lat = testPoint["GCJ_LAT"].asDouble
+            val lon = testPoint["GCJ_LON"].asDouble
+
+            if (ConnectionLineObj.clines.size > 0) {
+                if (ConnectionLineObj.clines[0].simpleCell.ID != key) {//切换了主小区，重新创建连线
+                    ConnectionLineObj.clearData()
+                    val cl = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
+                    ConnectionLineObj.addConnectionLine(map, cl)
+                    ConnectionLineObj.refreshLines()
+                } else {
+                    //未切换主小区，不处理，暂不考虑邻区
+                }
+            } else {// 第一次连线
+                val cl = ConnectionLine(LatLng(lat, lon), true, CellObj.cell_objects[key]!!)
+                ConnectionLineObj.addConnectionLine(map, cl)
+                ConnectionLineObj.refreshLines()
+            }
+        } else {
+            ConnectionLineObj.clearData()
+        }
     }
 
     private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
@@ -685,15 +684,15 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
             override fun onCameraChangeFinish(position: CameraPosition?) {
                 emitCameraChangeEvent("onStatusChangeComplete", position)
-//                //重新计算连线
-//                if (map_markers.containsKey(MapElementType.mark_Cell.value)) {
-//                    position?.let {
-//                        if (Math.abs(lastZoom - it.zoom) > 1f) {
-//                            ConnectionLineObj.refreshLines()
-//                            lastZoom = it.zoom
-//                        }
-//                    }
-//                }
+                //重新计算连线
+                if (map_markers.containsKey(MapElementType.mark_Cell.value)) {
+                    position?.let {
+                        if (Math.abs(lastZoom - it.zoom) > 1f) {
+                            ConnectionLineObj.refreshLines()
+                            lastZoom = it.zoom
+                        }
+                    }
+                }
             }
 
             override fun onCameraChange(position: CameraPosition?) {
