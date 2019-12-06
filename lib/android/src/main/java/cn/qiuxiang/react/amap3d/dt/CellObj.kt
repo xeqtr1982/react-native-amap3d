@@ -150,7 +150,7 @@ object CellObj {
 
             val paint = Paint()
             paint.color = cellStyle.color
-            paint.alpha = 100
+            paint.alpha = 50
 
             val paintStroke = Paint()
             paintStroke.style = Paint.Style.STROKE
