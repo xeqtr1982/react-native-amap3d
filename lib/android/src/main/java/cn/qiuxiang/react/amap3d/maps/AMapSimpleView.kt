@@ -35,19 +35,18 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         locationStyle
     }
 
-    private var map_markers = HashMap<Int, MutableList<Marker>>()
-    private val map_lines = HashMap<Int, MutableList<Polyline>>()
-    private val map_polygons = HashMap<Int, MutableList<Polygon>>()
-    private var save_TestPoints: MutableList<TestPoint> = mutableListOf()
+    private var map_markers = HashMap<Int, MutableList<Marker>>()//标记列表
+    private val map_lines = HashMap<Int, MutableList<Polyline>>()//线列表
+    private val map_polygons = HashMap<Int, MutableList<Polygon>>()//面列表
 
     private var selectMarker: Marker? = null //选中标记
-    private var selectMarkerList = HashMap<String, Marker>()         // MutableList<Marker> = mutableListOf()
-    private var isKeywordType: Boolean = false
+    private var selectMarkerList = HashMap<String, Marker>()  //选中标记列表
+    private var isKeywordType: Boolean = false //是否关键词查询
     private var serviceCellMarker: Marker? = null//主服务小区
 
-    private val maxTestPointCount = 100 //最多绘制测试点数
-    private val maxTestLinesCount = 12 //最多绘制线段数
-    private val maxlinePointsCount = 80 //每条线段的点数，必须小于maxTestPointCount
+    private val maxTestPointCount = 200 //最多绘制测试点数
+    private val maxTestLinesCount = 20 //最多绘制线段数
+    private val maxlinePointsCount = 180 //每条线段的点数，必须小于maxTestPointCount
 
 
     private var _touchCount: Int = 0 //是否手动拖动地图的判断值
@@ -61,7 +60,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     //get() = field
     private var project: Projection? = null
-    private var lastTilt: Float = 0f
+    private var lastTilt: Float = 0f//上次地图操作后的tilt值
     private var lastZoom: Float = 0f//上次地图操作后的zoomlevel值
 
     val infoAdapter = CustomInfoWindowAdapter()
@@ -79,7 +78,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
 
     //region 通用方法
-
+    /**
+     * 选中标记（重新设置标记样式）
+     */
     fun selectElement(args: ReadableArray?) {
         if (selectMarker != null)
             removeSelectMarker()
@@ -97,9 +98,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                             MapElementType.mark_Cell.value -> {
                                 val cellObject = extData.elementValue!!
 //                                if (cellObject["COVER_TYPE"].isJsonNull || cellObject["NET_NAME"].isJsonNull)
-//                                    null
-//                                else
-                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+////                                    null
+////                                else
+                                CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
 
                             }
                             else -> null
@@ -107,32 +108,16 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                         selectMarker = marker
                         selectMarker?.setIcon(bitmapDescriptor)
                     }
-
-//                    for (marker in selectMarkerList) {
-//                        val extData = (marker.`object` as ExtraData)!!
-//                        if (extData.elementKey == id) {
-//                            val bitmapDescriptor: BitmapDescriptor? = when (elementType) {
-//                                MapElementType.mark_Cell.value -> {
-//                                    val cellObject = extData.elementValue!!
-//                                    CellObj.getSelectBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
-//                                }
-//                                else -> null
-//                            }
-//                            selectMarker = marker
-//                            selectMarker?.setIcon(bitmapDescriptor)
-//                            //selectMarker?.showInfoWindow()
-//                            break
-//                        }
-//                    }
                 }
             }
-            //}
         } else {
             //removeSelectMarker()
         }
-
     }
 
+    /**
+     * 移除选中标记（重新设置标记样式）
+     */
     fun removeSelectMarker() {
         selectMarker?.let {
             if (it.isInfoWindowShown)
@@ -145,7 +130,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 //                            if (cellObject["COVER_TYPE"].isJsonNull )
 //                                null
 //                            else
-                                CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
+                            CellObj.getOriginalBitmapDescriptor(cellObject["COVER_TYPE"].asString, cellObject["NET_NAME"].asString, extData.elementSize)
                         else -> null
                     }
 
@@ -154,6 +139,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加多个标记对象
+     */
     fun addElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         if (!map_markers.containsKey(elementType))
@@ -165,6 +153,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加单个标记对象
+     */
     fun addElement(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         if (!map_markers.containsKey(elementType))
@@ -174,14 +165,20 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 移除标记对象
+     */
     fun removeElements(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         clearElementsByType(elementType)
     }
 
+    /**
+     * 根据标记对象类型，清除对应的标记列表
+     */
     fun clearElementsByType(elementType: Int) {
         if (map_markers.containsKey(elementType)) {
-            var elements = map_markers[elementType]!!
+            var elements = map_markers[elementType]
             elements?.let {
                 clearMarkerList(elements)
             }
@@ -191,7 +188,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             lines?.let {
                 clearLineList(it)
             }
-            save_TestPoints.clear()
         }
     }
 
@@ -219,12 +215,14 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 改变标记列表可见性
+     */
     fun changeElementsVisible(args: ReadableArray?) {
         val elementType: Int = args?.getInt(0)!!
         val visible: Boolean = args?.getBoolean(1)!!
         if (map_markers.containsKey(elementType)) {
             var elements = map_markers[elementType]!!
-            //if (elements.first().isVisible != visible)
             elements?.let {
                 if (elements.any()) {
                     for (marker in elements) {
@@ -248,11 +246,16 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 改变标记样式（未使用）
+     */
     fun changeElementsStyle(args: ReadableArray?) {}
-
 
     //endregion
 
+    /**
+     * 添加工单
+     */
     private fun addOrders(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         val targets = args?.getArray(1)!!
@@ -297,6 +300,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加小区
+     */
     private fun addCells(args: ReadableArray?) {
 
         val elementType = args?.getInt(0)!!
@@ -341,18 +347,42 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加多个测试点
+     */
     private fun addTestPoints(args: ReadableArray?) {
         val elementType = args?.getInt(0)!!
         val targets = args?.getArray(1)!!
         val size = args?.getInt(2)!!
         val testStatus = args?.getString(3)
         var markers = map_markers[elementType]!!
+        var tempList: MutableList<Marker> = mutableListOf()
         for (target in targets.toArrayList()) {
             val testPoint = JsonObject()
             for ((key, value) in (target as HashMap<String, Any>)) {
                 testPoint.addProperty(key, value?.toString())
             }
-            _addTestPoint(markers, testPoint, size, testStatus)
+            val marker = ParamObj.getMarker(map, testPoint, size,
+                    when (tempList.any()) {
+                        true -> tempList.last()
+                        false -> null
+                    })
+            marker?.let { tempList.add(it) }
+
+            //_addTestPoint(markers, testPoint, size, testStatus)
+        }
+        markers.addAll(tempList)
+
+        if (markers.size > maxTestPointCount) {
+            val times = markers.size / maxlinePointsCount
+            val count = maxlinePointsCount * times
+            val testPoints = mutableListOf<Marker>() //markers.subList(0, count)
+            for(i in 0 until count)
+                testPoints.add(markers[i])
+            val temp = markers.drop(count).toMutableList()
+            markers.clear()
+            markers.addAll(temp)
+            _addTestLine(testPoints)
         }
     }
 
@@ -361,8 +391,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
     var tempCount: Int = 0
     private fun addTestPoint(args: ReadableArray?) {
-        //Log.i("android addTestPoint", args.toString())
-
         val elementType = args?.getInt(0)!!
         val target = args?.getMap(1)!!
         val size = args?.getInt(2)!!
@@ -373,13 +401,12 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             testPoint.addProperty(key, value?.toString())
         _addTestPoint(map_markers[elementType]!!, testPoint, size, testStatus)
 
-//
-//所有参数都有可能为null
+        //所有参数都有可能为null
+        //小区连线部分
         val key = when (testPoint["Network"].asString) {
             "LTE" -> {
                 if (testPoint["ECI"].isJsonNull) "null"
                 else testPoint["ECI"].asString
-                //testPoint["eNodeBID"].asString + "_" + testPoint["CellID"].asString
             }
             "GSM" -> {
                 if (testPoint["LAC"].isJsonNull || testPoint["CI"].isJsonNull) "null"
@@ -387,7 +414,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             }
             else -> "null"
         }
-        //小区连线部分
         if (CellObj.cell_objects.containsKey(key) && CellObj.cell_objects[key]!!.isVisible) {
             val lat = testPoint["GCJ_LAT"].asDouble
             val lon = testPoint["GCJ_LON"].asDouble
@@ -411,6 +437,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加测试点标记具体方法
+     */
     private fun _addTestPoint(markers: MutableList<Marker>, testPoint: JsonObject?, size: Int, testStatus: String) {
         when (testStatus) {
             "START" -> clearElementsByType(MapElementType.mark_GPS.value) // clearMarkerList(markers) //clearTestPoints()
@@ -434,6 +463,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 添加单个测试点（手机处于非测试状态下，只显示一个测试点）
+     */
     private fun _addSingleTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         marker?.let {
             var move = true
@@ -451,6 +483,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 对列表中添加测试点（手机处于测试状态下，保留全部测试点，个数达到阈值，转为线路）
+     */
     private fun _addMultiTestPoint(markers: MutableList<Marker>, marker: Marker?) {
         if (marker != null) {
             var move = true
@@ -458,11 +493,13 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
             markers.add(marker)
             if (markers.count() > maxTestPointCount) {
-                val testPoints = markers.subList(0, maxlinePointsCount)
-                _addTestLine(testPoints)
+                val testPoints = mutableListOf<Marker>() //markers.subList(0, maxlinePointsCount)
+                for(i in 0 until maxlinePointsCount)
+                    testPoints.add(markers[i])
                 val temp = markers.drop(maxlinePointsCount).toMutableList()
                 markers.clear()
                 markers.addAll(temp)
+                _addTestLine(testPoints)
             }
             if (following && move)
                 moveTo(marker.position)
@@ -470,6 +507,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
     }
 
+    /**
+     * 测试点列表转为测试线路
+     */
     private fun _addTestLine(testPoints: MutableList<Marker>?) {
         val linetype = MapElementType.line_TestPoint.value
         if (!map_lines.containsKey(linetype))
@@ -511,6 +551,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
 
     //endregion
 
+    /**
+     * 改变测试点渲染参照的字段（未使用）
+     */
     fun changeRenderField(args: ReadableArray?) {
         ParamObj.clearRenderMaps()
         val field: String = args?.getString(0)!!
@@ -548,6 +591,9 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         }
     }
 
+    /**
+     * 根据手机地图像素坐标，获取对应经纬度坐标（未使用）
+     */
     fun fromScreenXY(args: ReadableArray?) {
 //        val latLng = project?.fromScreenLocation(android.graphics.Point(args?.getInt(0)!!, args?.getInt(1)!!))!!
 //        val lat = latLng.latitude
@@ -556,7 +602,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
     }
 
     /**
-     * 框选
+     * 框选，返回框选的经纬度范围和范围内的小区cgi列表
      */
     fun fromScreenRect(args: ReadableArray?) {
         val elementType: Int = args?.getInt(0)!!
@@ -569,9 +615,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         val leftbottom = project?.fromScreenLocation(android.graphics.Point(minx, maxy))!!
         val righttop = project?.fromScreenLocation(android.graphics.Point(maxx, miny))!!
 
-//        val wgs_leftbottom = BetrayLatLng.gcj_decrypt(leftbottom.latitude, leftbottom.longitude)
-//        val wgs_righttop = BetrayLatLng.gcj_decrypt(righttop.latitude, righttop.longitude)
-//        Log.i("ReactNativeJS","wgs_rect "+wgs_leftbottom[0].toString()+","+wgs_leftbottom[1].toString()+","+wgs_righttop[0].toString()+","+wgs_righttop[1].toString())
         val list = when (elementType) {
             MapElementType.mark_Cell.value -> CellObj.getMarkers(map_markers[elementType], leftbottom.latitude, leftbottom.longitude, righttop.latitude, righttop.longitude)
             else -> mutableListOf()
@@ -641,7 +684,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                 }
             } else {
                 marker.showInfoWindow()
-                //Log.i("ReactNativeJS", "setOnMarkerClickListener")
                 val data = (marker.`object` as ExtraData)
 
                 val list = when (data.elementType) {
@@ -650,7 +692,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
                     else -> mutableListOf()
                 }
                 var array = Arguments.createArray()
-                if (!isKeywordType )//|| data.elementType == MapElementType.mark_Order.value)
+                if (!isKeywordType)//|| data.elementType == MapElementType.mark_Order.value)
                 {
                     selectMarkerList.clear()
                     if (list.count() > 0) {
@@ -684,7 +726,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
             override fun onCameraChangeFinish(position: CameraPosition?) {
                 emitCameraChangeEvent("onStatusChangeComplete", position)
-                //重新计算连线
+                //地图显示等级发生明显改变，重新计算连线
                 if (map_markers.containsKey(MapElementType.mark_Cell.value)) {
                     position?.let {
                         if (Math.abs(lastZoom - it.zoom) > 1f) {
@@ -704,8 +746,7 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
             val location = map.myLocation
             val cameraUpdate = CameraUpdateFactory.newCameraPosition(
                     CameraPosition(LatLng(location.latitude, location.longitude), 17f, 0f, 0f))
-            map.animateCamera(cameraUpdate, 500, null)//animateCallback)
-            //map.moveCamera(CameraUpdateFactory.zoomTo(17f))
+            map.animateCamera(cameraUpdate, 500, null)
         }
 
         //region 未使用地图事件
@@ -825,17 +866,6 @@ class AMapSimpleView(context: Context) : TextureMapView(context) {
         map.myLocationStyle = locationStyle
     }
 
-    //region Description
-
-    //    fun addTestPoint(testPointStr: String, testStatus: String) {
-//        val testPoint: JsonObject? = Gson().fromJson(testPointStr, JsonObject::class.java)
-//        _addTestPoint(testPoint, testStatus)
-//    }
-
-
-    //endregion
-
 }
 
-//data class ExtraData(var elementKey: String, var elementType: Int, var elementValue: HashMap<String, Float>?)
 data class ExtraData(var elementKey: String, var elementType: Int, var elementSize: Int, var elementValue: JsonObject?)
