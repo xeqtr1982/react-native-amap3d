@@ -1,10 +1,13 @@
 package cn.qiuxiang.react.amap3d.dt
 
 import android.graphics.*
+import android.graphics.Paint.ANTI_ALIAS_FLAG
+import android.graphics.Paint.FILTER_BITMAP_FLAG
 import cn.qiuxiang.react.amap3d.maps.ExtraData
 import com.amap.api.maps.AMap
 import com.amap.api.maps.model.*
 import com.google.gson.JsonObject
+
 
 /**
  * Created by lee on 2019/3/19.
@@ -94,6 +97,7 @@ object CellObj {
             val cellStyle = ObjRender.CELL_COLOR
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
+//                false -> ObjRender.CELL_OUT_PATH_30
                 false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = (size * 1.5).toInt()
@@ -111,6 +115,7 @@ object CellObj {
             paintStroke.style = Paint.Style.STROKE
             paintStroke.color = Color.rgb(255, 20, 147)
             paintStroke.strokeWidth = 4f
+            paintStroke.isAntiAlias = true
 
             val path1 = PathParser().createPathFromPathData(cellPath.pathData)
             val path = Path()
@@ -121,6 +126,7 @@ object CellObj {
             val bitmap = Bitmap.createBitmap(
                     drawSize, drawSize, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+            canvas.drawFilter = PaintFlagsDrawFilter(0, ANTI_ALIAS_FLAG or FILTER_BITMAP_FLAG)
             canvas.drawPath(path, paint)//填充图形
             canvas.drawPath(path, paintStroke)//外边框
             val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
@@ -136,6 +142,7 @@ object CellObj {
             val cellStyle = ObjRender.CELL_COLOR
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
+//                false -> ObjRender.CELL_OUT_PATH_30
                 false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = size
@@ -156,6 +163,7 @@ object CellObj {
             paintStroke.style = Paint.Style.STROKE
             paintStroke.color = cellStyle.strokeColor
             paintStroke.strokeWidth = 2f
+            paintStroke.isAntiAlias = true
             //paintStroke.setPathEffect()
 
             val path1 = PathParser().createPathFromPathData(cellPath.pathData)
@@ -167,6 +175,7 @@ object CellObj {
             val bitmap = Bitmap.createBitmap(
                     drawSize, drawSize, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+            canvas.drawFilter = PaintFlagsDrawFilter(0, ANTI_ALIAS_FLAG or FILTER_BITMAP_FLAG)
             canvas.drawPath(path, paint)//填充图形
             canvas.drawPath(path, paintStroke)//外边框
             val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
@@ -313,24 +322,25 @@ object CellObj {
     }
 
     fun getFixedBitmapDescriptor(siteType: String, netWork: String, size: Int, color: Int, strokeColor: Int): BitmapDescriptor? {
-        val key = netWork + "_" + siteType + "_" + color.toString()+"_"+strokeColor.toString()
+        val key = netWork + "_" + siteType + "_" + color.toString() + "_" + strokeColor.toString()
 
         if (!fixedMaps.containsKey(key)) {
 
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
+//                false -> ObjRender.CELL_OUT_PATH_30
                 false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = size
-            var scale=1.0f
-            if(strokeColor==Color.RED){
+            var scale = 1.0f
+            if (strokeColor == Color.RED) {
                 drawSize = (size * 1.5).toInt()
                 scale = drawSize * 1.0f / cellPath.height
                 if (siteType == "室内") {
                     scale = scale * 0.7f
                     drawSize = (drawSize * 0.7).toInt()
                 }
-            }else{
+            } else {
                 scale = size * 1.0f / cellPath.height
                 if (siteType == "室内") {
                     scale = scale * 0.5f
@@ -349,6 +359,7 @@ object CellObj {
             paintStroke.style = Paint.Style.STROKE
             paintStroke.color = strokeColor
             paintStroke.strokeWidth = 2f
+            paintStroke.isAntiAlias = true
             //paintStroke.setPathEffect()
 
             val path1 = PathParser().createPathFromPathData(cellPath.pathData)
@@ -360,6 +371,7 @@ object CellObj {
             val bitmap = Bitmap.createBitmap(
                     drawSize, drawSize, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
+            canvas.drawFilter = PaintFlagsDrawFilter(0, ANTI_ALIAS_FLAG or FILTER_BITMAP_FLAG)
             canvas.drawPath(path, paint)//填充图形
             canvas.drawPath(path, paintStroke)//外边框
             val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap)
