@@ -94,7 +94,7 @@ object CellObj {
             val cellStyle = ObjRender.CELL_COLOR
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
-                false -> ObjRender.CELL_OUT_PATH_30
+                false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = (size * 1.5).toInt()
             var scale = drawSize * 1.0f / cellPath.height
@@ -136,7 +136,7 @@ object CellObj {
             val cellStyle = ObjRender.CELL_COLOR
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
-                false -> ObjRender.CELL_OUT_PATH_30
+                false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = size
             var scale = size * 1.0f / cellPath.height
@@ -319,7 +319,7 @@ object CellObj {
 
             val cellPath = when (siteType == "室内") {
                 true -> ObjRender.CELL_GSM_INNER_PATH
-                false -> ObjRender.CELL_OUT_PATH_30
+                false -> ObjRender.CELL_OUT_PATH_45
             }
             var drawSize = size
             var scale=1.0f
